@@ -53,3 +53,12 @@ Thumbs.db
 
 # Temporary files
 info.txt
+.env
+Makefile
+config/settings/__init__.py
+config/settings/base.py
+config/settings/development.py
+pyproject.toml
+pytest.ini
+requirements.txt
+start.sh
