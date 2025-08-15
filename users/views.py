@@ -26,7 +26,10 @@ class LogoutView(APIView):
             token.blacklist()
             return Response(status=status.HTTP_205_RESET_CONTENT)
         except Exception as e:
-            return Response(status=status.HTTP_400_BAD_REQUEST)
+        except KeyError:
+            return Response({'error': "Missing 'refresh' token."}, status=status.HTTP_400_BAD_REQUEST)
+        except InvalidToken:
+            return Response({'error': "Invalid refresh token."}, status=status.HTTP_400_BAD_REQUEST)
 
 from django.utils.http import urlsafe_base64_decode
 from django.utils.encoding import force_str
