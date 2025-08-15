@@ -87,7 +87,6 @@ class PasswordResetConfirmView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 from .permissions import IsAdmin
-
 class AdminOnlyView(APIView):
     permission_classes = [IsAuthenticated, IsAdmin]
 
