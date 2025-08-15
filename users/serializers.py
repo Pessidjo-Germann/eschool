@@ -20,7 +20,6 @@ class UserSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
-        from .utils import send_verification_email
 
         validated_data.pop('password2')
         user = User.objects.create_user(
