@@ -42,7 +42,7 @@
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenu">
                             <li><a class="dropdown-item" href="#">Dashboard</a></li>
                             <li><a class="dropdown-item" href="#">Profile</a></li>
-                            {% if user.is_superuser or user.is_admin %}
+                            {% if user.is_superuser or user.is_staff %}
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item" href="{% url 'admin:index' %}">Admin panel</a></li>
                              {% endif %}
