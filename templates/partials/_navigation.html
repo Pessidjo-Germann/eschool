@@ -21,7 +21,11 @@
                         <li class="nav-item">
                             <a class="nav-link" href="#">My creations</a>
                         </li>
-                    {% elif user.is_student %}
+                    {% if user.groups.filter(name="Instructors").exists %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="#">My creations</a>
+                        </li>
+                    {% elif user.groups.filter(name="Students").exists %}
                          <li class="nav-item">
                             <a class="nav-link" href="#">My courses</a>
                         </li>
