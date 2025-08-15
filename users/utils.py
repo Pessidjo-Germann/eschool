@@ -13,7 +13,7 @@ def send_verification_email(user, request):
     # we will hardcode it for now. In a real app, you would use:
     # from django.contrib.sites.shortcuts import get_current_site
     # current_site = get_current_site(request).domain
-    current_site = "localhost:8000" # or your frontend URL
+    current_site = getattr(settings, "SITE_DOMAIN", "localhost:8000")  # configurable site domain
 
     verify_url = f"http://{current_site}/api/users/verify-email/{uid}/{token}/"
 
