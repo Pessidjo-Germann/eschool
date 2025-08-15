@@ -29,7 +29,7 @@ def send_password_reset_email(user, request):
     token = default_token_generator.make_token(user)
     uid = urlsafe_base64_encode(force_bytes(user.pk))
 
-    current_site = "localhost:8000" # or your frontend URL
+    current_site = FRONTEND_DOMAIN  # or your frontend URL
 
     reset_url = f"http://{current_site}/api/users/password-reset-confirm/{uid}/{token}/"
 
