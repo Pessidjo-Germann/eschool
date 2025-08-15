@@ -31,7 +31,6 @@ class LogoutView(APIView):
 from django.utils.http import urlsafe_base64_decode
 from django.utils.encoding import force_str
 from django.contrib.auth.tokens import default_token_generator
-
 class VerifyEmailView(APIView):
     permission_classes = (AllowAny,)
 
