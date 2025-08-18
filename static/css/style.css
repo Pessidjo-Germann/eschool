@@ -840,4 +840,451 @@ body {
     }
 }
 
+/* Authentication Pages Styles */
+.auth-section {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.03) 0%, rgba(118, 75, 162, 0.03) 100%);
+    min-height: 100vh;
+    position: relative;
+}
+
+.auth-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: 
+        radial-gradient(circle at 20% 50%, rgba(102, 126, 234, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(118, 75, 162, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 40% 80%, rgba(79, 172, 254, 0.1) 0%, transparent 50%);
+    pointer-events: none;
+}
+
+.auth-card {
+    padding: 0;
+    border-radius: 20px;
+    overflow: hidden;
+    border: none;
+    position: relative;
+    z-index: 1;
+}
+
+.auth-header {
+    background: var(--primary-gradient);
+    color: white;
+    padding: 3rem 2rem 2rem;
+    position: relative;
+}
+
+.auth-header::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 20px;
+    background: var(--bg-white);
+    border-radius: 20px 20px 0 0;
+}
+
+.auth-logo {
+    margin-bottom: 1.5rem;
+}
+
+.auth-logo .brand-icon {
+    width: 60px;
+    height: 60px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 15px;
+    margin: 0 auto;
+    font-size: 1.5rem;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+}
+
+.auth-title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.auth-subtitle {
+    opacity: 0.9;
+    font-size: 1rem;
+    margin: 0;
+    line-height: 1.5;
+}
+
+.auth-body {
+    padding: 2rem;
+}
+
+.auth-form {
+    margin: 0;
+}
+
+.modern-input {
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1rem;
+    font-size: 1rem;
+    transition: var(--transition);
+    background: var(--bg-light);
+}
+
+.modern-input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.15);
+    background: var(--bg-white);
+}
+
+.form-floating > label {
+    color: var(--text-light);
+    font-weight: 500;
+}
+
+.form-floating > .modern-input:focus ~ label,
+.form-floating > .modern-input:not(:placeholder-shown) ~ label {
+    color: var(--primary-color);
+}
+
+.form-error {
+    margin-top: 0.5rem;
+}
+
+.form-check-input:checked {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.form-check-label {
+    color: var(--text-dark);
+    font-size: 0.95rem;
+}
+
+.auth-link {
+    color: var(--primary-color);
+    text-decoration: none;
+    font-weight: 500;
+    transition: var(--transition);
+}
+
+.auth-link:hover {
+    color: var(--primary-color);
+    text-decoration: underline;
+}
+
+.auth-footer {
+    background: var(--bg-light);
+    padding: 1.5rem 2rem;
+    border-top: 1px solid var(--border-color);
+}
+
+/* Auth Features */
+.auth-features,
+.auth-benefits {
+    animation: fadeInUp 0.6s ease-out 0.3s both;
+}
+
+.feature-preview,
+.benefit-item {
+    padding: 1rem;
+    text-align: center;
+}
+
+.feature-preview i,
+.benefit-icon i {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.benefit-item {
+    margin-bottom: 1rem;
+}
+
+.benefit-item h6 {
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    color: var(--text-dark);
+}
+
+/* Alert Styles */
+.alert {
+    border: none;
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+}
+
+.alert-success {
+    background: rgba(34, 197, 94, 0.1);
+    color: #16a34a;
+}
+
+.alert-error,
+.alert-danger {
+    background: rgba(239, 68, 68, 0.1);
+    color: #dc2626;
+}
+
+.alert-info {
+    background: rgba(59, 130, 246, 0.1);
+    color: #2563eb;
+}
+
+/* Password Strength Indicator */
+.password-strength {
+    margin-top: 0.5rem;
+    display: flex;
+    gap: 0.25rem;
+}
+
+.strength-bar {
+    height: 4px;
+    flex: 1;
+    background: var(--border-color);
+    border-radius: 2px;
+    transition: var(--transition);
+}
+
+.strength-bar.active {
+    background: var(--primary-color);
+}
+
+.strength-bar.weak {
+    background: #ef4444;
+}
+
+.strength-bar.medium {
+    background: #f59e0b;
+}
+
+.strength-bar.strong {
+    background: #10b981;
+}
+
+/* Social Login Buttons */
+.social-login {
+    margin: 1.5rem 0;
+}
+
+.social-divider {
+    text-align: center;
+    position: relative;
+    margin: 1.5rem 0;
+    color: var(--text-light);
+}
+
+.social-divider::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--border-color);
+}
+
+.social-divider span {
+    background: var(--bg-white);
+    padding: 0 1rem;
+    position: relative;
+    z-index: 1;
+}
+
+.social-btn {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid var(--border-color);
+    border-radius: 12px;
+    background: var(--bg-white);
+    color: var(--text-dark);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    font-weight: 500;
+    transition: var(--transition);
+    margin-bottom: 0.75rem;
+}
+
+.social-btn:hover {
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+.social-btn i {
+    font-size: 1.25rem;
+}
+
+/* Responsive Auth Pages */
+@media (max-width: 767.98px) {
+    .auth-header {
+        padding: 2rem 1.5rem 1.5rem;
+    }
+    
+    .auth-body {
+        padding: 1.5rem;
+    }
+    
+    .auth-footer {
+        padding: 1rem 1.5rem;
+    }
+    
+    .auth-title {
+        font-size: 1.5rem;
+    }
+    
+    .auth-subtitle {
+        font-size: 0.9rem;
+    }
+    
+    .benefit-item {
+        margin-bottom: 1.5rem;
+    }
+}
+
+/* Loading States */
+.auth-form.loading {
+    pointer-events: none;
+    opacity: 0.7;
+}
+
+.auth-form.loading .btn {
+    position: relative;
+}
+
+.auth-form.loading .btn::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 20px;
+    height: 20px;
+    border: 2px solid transparent;
+    border-top: 2px solid currentColor;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+/* Dashboard Styles for Authenticated Users */
+.dashboard-welcome {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.welcome-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+    color: var(--text-dark);
+}
+
+.welcome-subtitle {
+    font-size: 1.1rem;
+    color: var(--text-light);
+    margin-bottom: 0;
+    line-height: 1.6;
+}
+
+.stat-card {
+    background: var(--bg-white);
+    border-radius: 15px;
+    padding: 1.5rem;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    border: 1px solid var(--border-color);
+}
+
+.stat-icon {
+    width: 50px;
+    height: 50px;
+    background: rgba(102, 126, 234, 0.1);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+}
+
+.stat-info h4 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    color: var(--text-dark);
+}
+
+.quick-actions {
+    background: var(--bg-white);
+}
+
+.action-card {
+    padding: 2rem;
+    text-align: center;
+    height: 100%;
+    transition: var(--transition);
+    border: 1px solid var(--border-color);
+}
+
+.action-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-lg);
+}
+
+.action-icon {
+    width: 70px;
+    height: 70px;
+    background: var(--primary-gradient);
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.5rem;
+    color: white;
+    font-size: 1.75rem;
+    box-shadow: var(--shadow-md);
+}
+
+.action-card h5 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: var(--text-dark);
+}
+
+.action-card p {
+    color: var(--text-light);
+    margin-bottom: 1.5rem;
+    line-height: 1.5;
+}
+
+/* Responsive Dashboard */
+@media (max-width: 767.98px) {
+    .welcome-title {
+        font-size: 2rem;
+    }
+    
+    .welcome-subtitle {
+        font-size: 1rem;
+    }
+    
+    .stat-card {
+        margin-top: 2rem;
+        justify-content: center;
+        text-align: center;
+    }
+    
+    .action-card {
+        margin-bottom: 1rem;
+    }
+}
+
 /* Custom styles for eSchool project */

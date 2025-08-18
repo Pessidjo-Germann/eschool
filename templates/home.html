@@ -5,6 +5,114 @@
 {% endblock %}
 
 {% block content %}
+    {% if user.is_authenticated %}
+        <!-- Dashboard Section for Authenticated Users -->
+        <section class="dashboard-welcome py-5">
+            <div class="container">
+                <div class="row align-items-center">
+                    <div class="col-lg-8">
+                        <div class="welcome-content">
+                            <h1 class="welcome-title">
+                                Bon retour, <span class="gradient-text">{{ user.first_name|default:user.username }}</span> ! 👋
+                            </h1>
+                            <p class="welcome-subtitle">
+                                {% if user.is_instructor %}
+                                    Prêt à créer du contenu inspirant et à partager vos connaissances ?
+                                {% else %}
+                                    Prêt à continuer votre parcours d'apprentissage ? Vos cours vous attendent !
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="col-lg-4 text-lg-end">
+                        <div class="welcome-stats">
+                            <div class="stat-card">
+                                <div class="stat-icon">
+                                    <i class="bi bi-trophy text-warning"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <h4>{{ user.role|capfirst }}</h4>
+                                    <small class="text-muted">Votre rôle</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Quick Actions Section -->
+        <section class="quick-actions py-4">
+            <div class="container">
+                <div class="row g-4">
+                    {% if user.is_instructor %}
+                        <div class="col-md-4">
+                            <div class="action-card modern-card">
+                                <div class="action-icon">
+                                    <i class="bi bi-plus-circle"></i>
+                                </div>
+                                <h5>Créer un cours</h5>
+                                <p>Partagez vos connaissances avec la communauté</p>
+                                <a href="#" class="btn modern-btn-filled">Commencer</a>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="action-card modern-card">
+                                <div class="action-icon">
+                                    <i class="bi bi-journal-bookmark"></i>
+                                </div>
+                                <h5>Mes créations</h5>
+                                <p>Gérez vos cours et suivez les inscriptions</p>
+                                <a href="#" class="btn modern-btn">Voir mes cours</a>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="action-card modern-card">
+                                <div class="action-icon">
+                                    <i class="bi bi-bar-chart"></i>
+                                </div>
+                                <h5>Analytiques</h5>
+                                <p>Suivez les performances de vos cours</p>
+                                <a href="#" class="btn modern-btn">Voir stats</a>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="col-md-4">
+                            <div class="action-card modern-card">
+                                <div class="action-icon">
+                                    <i class="bi bi-book"></i>
+                                </div>
+                                <h5>Mes cours</h5>
+                                <p>Continuez là où vous vous êtes arrêté</p>
+                                <a href="#" class="btn modern-btn-filled">Continuer</a>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="action-card modern-card">
+                                <div class="action-icon">
+                                    <i class="bi bi-search"></i>
+                                </div>
+                                <h5>Explorer</h5>
+                                <p>Découvrez de nouveaux cours passionnants</p>
+                                <a href="#" class="btn modern-btn">Explorer</a>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="action-card modern-card">
+                                <div class="action-icon">
+                                    <i class="bi bi-trophy"></i>
+                                </div>
+                                <h5>Mes certificats</h5>
+                                <p>Consultez vos accomplissements</p>
+                                <a href="#" class="btn modern-btn">Voir certificats</a>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </section>
+    {% else %}
+        <!-- Hero Section for Non-Authenticated Users -->
     <!-- Hero Section -->
     <section class="hero-section">
         <div class="container">
@@ -135,4 +243,5 @@
             </div>
         </div>
     </section>
+    {% endif %}
 {% endblock %}

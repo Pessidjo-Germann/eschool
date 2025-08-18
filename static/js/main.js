@@ -188,6 +188,146 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     console.log('🎓 eSchool loaded successfully!');
+
+    // Authentication page enhancements
+    if (document.querySelector('.auth-form')) {
+        initAuthEnhancements();
+    }
 });
+
+// Authentication page specific enhancements
+function initAuthEnhancements() {
+    const authForm = document.querySelector('.auth-form');
+    const passwordInput = document.querySelector('#id_password1, #id_password');
+    const confirmPasswordInput = document.querySelector('#id_password2');
+    
+    // Add loading state to form submission
+    if (authForm) {
+        authForm.addEventListener('submit', function() {
+            this.classList.add('loading');
+        });
+    }
+    
+    // Real-time password validation
+    if (passwordInput) {
+        passwordInput.addEventListener('input', function() {
+            const password = this.value;
+            showPasswordStrength(password);
+        });
+    }
+    
+    // Confirm password validation
+    if (confirmPasswordInput && passwordInput) {
+        confirmPasswordInput.addEventListener('input', function() {
+            const password = passwordInput.value;
+            const confirmPassword = this.value;
+            
+            if (confirmPassword && password !== confirmPassword) {
+                this.setCustomValidity('Les mots de passe ne correspondent pas');
+                this.classList.add('is-invalid');
+            } else {
+                this.setCustomValidity('');
+                this.classList.remove('is-invalid');
+            }
+        });
+    }
+    
+    // Enhanced form field animations
+    const formInputs = document.querySelectorAll('.modern-input');
+    formInputs.forEach(input => {
+        input.addEventListener('focus', function() {
+            this.parentElement.classList.add('focused');
+            
+            // Add a subtle scale animation
+            this.style.transform = 'scale(1.02)';
+        });
+        
+        input.addEventListener('blur', function() {
+            this.style.transform = 'scale(1)';
+            
+            if (!this.value) {
+                this.parentElement.classList.remove('focused');
+            }
+        });
+        
+        // Check if input has value on load
+        if (input.value) {
+            input.parentElement.classList.add('focused');
+        }
+    });
+    
+    // Auto-dismiss alerts after 5 seconds
+    const alerts = document.querySelectorAll('.alert');
+    alerts.forEach(alert => {
+        setTimeout(() => {
+            const bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+        }, 5000);
+    });
+}
+
+// Password strength indicator
+function showPasswordStrength(password) {
+    // Remove existing strength indicator if any
+    const existingIndicator = document.querySelector('.password-strength');
+    if (existingIndicator) {
+        existingIndicator.remove();
+    }
+    
+    if (!password) return;
+    
+    const passwordInput = document.querySelector('#id_password1, #id_password');
+    const strength = calculatePasswordStrength(password);
+    
+    const strengthIndicator = document.createElement('div');
+    strengthIndicator.className = 'password-strength';
+    strengthIndicator.innerHTML = `
+        <div class="strength-bar ${strength.level >= 1 ? (strength.level === 1 ? 'weak' : strength.level === 2 ? 'medium' : 'strong') : ''}"></div>
+        <div class="strength-bar ${strength.level >= 2 ? (strength.level === 2 ? 'medium' : 'strong') : ''}"></div>
+        <div class="strength-bar ${strength.level >= 3 ? 'strong' : ''}"></div>
+        <div class="strength-bar ${strength.level >= 4 ? 'strong' : ''}"></div>
+    `;
+    
+    passwordInput.parentElement.appendChild(strengthIndicator);
+    
+    // Add strength text
+    const strengthText = document.createElement('small');
+    strengthText.className = 'strength-text mt-1 d-block';
+    strengthText.style.color = strength.level <= 1 ? '#ef4444' : strength.level === 2 ? '#f59e0b' : '#10b981';
+    strengthText.textContent = strength.text;
+    
+    strengthIndicator.appendChild(strengthText);
+}
+
+function calculatePasswordStrength(password) {
+    let score = 0;
+    let text = 'Très faible';
+    
+    // Length check
+    if (password.length >= 8) score++;
+    if (password.length >= 12) score++;
+    
+    // Character variety checks
+    if (/[a-z]/.test(password)) score++;
+    if (/[A-Z]/.test(password)) score++;
+    if (/[0-9]/.test(password)) score++;
+    if (/[^A-Za-z0-9]/.test(password)) score++;
+    
+    // Determine strength level and text
+    if (score >= 5) {
+        text = 'Très fort';
+    } else if (score >= 4) {
+        text = 'Fort';
+    } else if (score >= 3) {
+        text = 'Moyen';
+    } else if (score >= 2) {
+        text = 'Faible';
+    }
+    
+    return {
+        level: Math.min(Math.floor(score / 1.5), 4),
+        text: text
+    };
+}
 
 // Custom styles for eSchool project
