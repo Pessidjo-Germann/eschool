@@ -1,0 +1,545 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ course.title }} - E-School{% endblock %}
+
+{% block extra_css %}
+<style>
+.course-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 3rem 0;
+}
+.course-thumbnail {
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+.course-info-card {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    padding: 2rem;
+    position: sticky;
+    top: 2rem;
+}
+.module-card {
+    border: none;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    margin-bottom: 1rem;
+    border-radius: 10px;
+}
+.lesson-item {
+    border-left: 3px solid #e9ecef;
+    padding: 0.75rem 1rem;
+    margin: 0.5rem 0;
+    background: #f8f9fa;
+    border-radius: 0 8px 8px 0;
+    transition: all 0.2s;
+}
+.lesson-item:hover {
+    border-left-color: #007bff;
+    background: #e3f2fd;
+}
+.lesson-preview {
+    border-left-color: #28a745;
+    background: #d4edda;
+}
+.lesson-locked {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+.instructor-card {
+    background: #f8f9fa;
+    border-radius: 15px;
+    padding: 1.5rem;
+    text-align: center;
+}
+.badge-difficulty {
+    font-size: 0.875rem;
+    padding: 0.5rem 1rem;
+}
+.feature-list {
+    list-style: none;
+    padding: 0;
+}
+.feature-list li {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #e9ecef;
+}
+.feature-list li:last-child {
+    border-bottom: none;
+}
+.feature-list i {
+    color: #28a745;
+    margin-right: 0.5rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- En-tête du cours -->
+<div class="course-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <nav aria-label="breadcrumb" class="mb-3">
+                    <ol class="breadcrumb text-light">
+                        <li class="breadcrumb-item">
+                            <a href="{% url 'courses:courses_list' %}" class="text-light">Cours</a>
+                        </li>
+                        <li class="breadcrumb-item">
+                            <a href="{% url 'courses:category_detail' course.category.slug %}" class="text-light">
+                                {{ course.category.name }}
+                            </a>
+                        </li>
+                        <li class="breadcrumb-item active text-light">{{ course.title }}</li>
+                    </ol>
+                </nav>
+
+                <h1 class="display-5 mb-3">{{ course.title }}</h1>
+                <p class="lead mb-4">{{ course.short_description }}</p>
+
+                <div class="d-flex flex-wrap gap-3 mb-4">
+                    <span class="badge badge-difficulty bg-primary">
+                        <i class="bi bi-signal"></i> {{ course.get_difficulty_display }}
+                    </span>
+                    {% if course.is_free %}
+                        <span class="badge badge-difficulty bg-success">
+                            <i class="bi bi-gift"></i> Gratuit
+                        </span>
+                    {% else %}
+                        <span class="badge badge-difficulty bg-warning text-dark">
+                            <i class="bi bi-currency-dollar"></i> ${{ course.price }}
+                        </span>
+                    {% endif %}
+                    {% if course.is_featured %}
+                        <span class="badge badge-difficulty bg-danger">
+                            <i class="bi bi-star-fill"></i> Cours populaire
+                        </span>
+                    {% endif %}
+                </div>
+
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <h5>{{ course.enrollment_count }}</h5>
+                        <small>Étudiants inscrits</small>
+                    </div>
+                    <div class="col-md-3">
+                        <h5>{{ total_duration_hours }}h{{ total_duration_minutes }}m</h5>
+                        <small>Durée totale</small>
+                    </div>
+                    <div class="col-md-3">
+                        <h5>{{ modules.count }}</h5>
+                        <small>Modules</small>
+                    </div>
+                    <div class="col-md-3">
+                        <h5>4.5 ⭐</h5>
+                        <small>Note moyenne</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4 text-center">
+                {% if course.thumbnail %}
+                    <img src="{{ course.thumbnail.url }}" alt="{{ course.title }}" 
+                         class="img-fluid course-thumbnail" style="max-height: 300px;">
+                {% else %}
+                    <div class="course-thumbnail d-flex align-items-center justify-content-center bg-white text-muted" 
+                         style="height: 250px; width: 100%;">
+                        <i class="bi bi-book" style="font-size: 4rem;"></i>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container py-5">
+    <div class="row">
+        <!-- Contenu principal -->
+        <div class="col-lg-8">
+            <!-- Description -->
+            <section class="mb-5">
+                <h2 class="mb-3">Description</h2>
+                <div class="card">
+                    <div class="card-body">
+                        <p>{{ course.description|linebreaks }}</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Objectifs d'apprentissage -->
+            {% if course.learning_objectives %}
+            <section class="mb-5">
+                <h2 class="mb-3">Ce que vous apprendrez</h2>
+                <div class="card">
+                    <div class="card-body">
+                        <div class="learning-objectives">
+                            {{ course.learning_objectives|linebreaks }}
+                        </div>
+                    </div>
+                </div>
+            </section>
+            {% endif %}
+
+            <!-- Contenu du cours -->
+            <section class="mb-5">
+                <h2 class="mb-3">Contenu du cours</h2>
+                {% for module in modules %}
+                <div class="card module-card">
+                    <div class="card-header">
+                        <h5 class="mb-0">
+                            <i class="bi bi-collection"></i>
+                            Module {{ forloop.counter }}: {{ module.title }}
+                        </h5>
+                        <small class="text-muted">{{ module.description }}</small>
+                    </div>
+                    <div class="card-body">
+                        {% for lesson in module.lessons.all %}
+                        <div class="lesson-item {% if lesson.is_preview %}lesson-preview{% elif not can_access_full_content %}lesson-locked{% endif %}">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-play-circle me-2"></i>
+                                    {% if lesson.is_preview or can_access_full_content %}
+                                        <a href="{% url 'courses:lesson_detail' course.slug lesson.id %}" 
+                                           class="text-decoration-none">
+                                            {{ lesson.title }}
+                                        </a>
+                                    {% else %}
+                                        <span class="text-muted">{{ lesson.title }}</span>
+                                    {% endif %}
+                                    {% if lesson.is_preview %}
+                                        <span class="badge bg-success ms-2">Aperçu gratuit</span>
+                                    {% elif not can_access_full_content %}
+                                        <i class="bi bi-lock-fill ms-2 text-muted"></i>
+                                    {% endif %}
+                                </div>
+                                <small class="text-muted">
+                                    <i class="bi bi-clock"></i> 
+                                    {% if lesson.duration %}
+                                        {{ lesson.duration }}
+                                    {% else %}
+                                        5 min
+                                    {% endif %}
+                                </small>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <p class="text-muted mb-0">Aucune leçon disponible pour ce module.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% empty %}
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    Le contenu de ce cours est en cours de préparation.
+                </div>
+                {% endfor %}
+            </section>
+
+            <!-- Instructeur -->
+            <section class="mb-5">
+                <h2 class="mb-3">Votre instructeur</h2>
+                <div class="instructor-card">
+                    <div class="row align-items-center">
+                        <div class="col-md-3">
+                            {% if course.instructor.profile_picture %}
+                                <img src="{{ course.instructor.profile_picture.url }}" 
+                                     alt="{{ course.instructor.get_full_name }}"
+                                     class="rounded-circle img-fluid" style="width: 100px; height: 100px; object-fit: cover;">
+                            {% else %}
+                                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center mx-auto"
+                                     style="width: 100px; height: 100px;">
+                                    <i class="bi bi-person" style="font-size: 2rem;"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-9">
+                            <h4>{{ course.instructor.get_full_name|default:course.instructor.username }}</h4>
+                            <p class="text-muted mb-2">Instructeur</p>
+                            {% if course.instructor.bio %}
+                                <p>{{ course.instructor.bio|truncatewords:30 }}</p>
+                            {% endif %}
+                            <div class="text-muted">
+                                <small><i class="bi bi-book"></i> X cours enseignés</small> •
+                                <small><i class="bi bi-people"></i> X étudiants</small> •
+                                <small><i class="bi bi-star-fill text-warning"></i> 4.8 note</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <div class="course-info-card">
+                {% if course.is_free %}
+                    <div class="text-center mb-4">
+                        <h3 class="text-success">Gratuit</h3>
+                    </div>
+                    {% if user.is_authenticated %}
+                        {% if is_enrolled %}
+                            <a href="{% url 'courses:my_courses' %}" class="btn btn-success btn-lg w-100 mb-3">
+                                <i class="bi bi-check-circle"></i> Cours suivi
+                            </a>
+                        {% else %}
+                            <form method="post" action="{% url 'courses:enroll_course' course.slug %}" class="enroll-form">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-success btn-lg w-100 mb-3">
+                                    <i class="bi bi-person-plus"></i> S'inscrire gratuitement
+                                </button>
+                            </form>
+                        {% endif %}
+                    {% else %}
+                        <a href="{% url 'login' %}" class="btn btn-success btn-lg w-100 mb-3">
+                            <i class="bi bi-person-plus"></i> Connexion pour s'inscrire
+                        </a>
+                    {% endif %}
+                {% else %}
+                    <div class="text-center mb-4">
+                        <h3>${{ course.price }}</h3>
+                        <small class="text-muted">Accès à vie</small>
+                    </div>
+                    {% if user.is_authenticated %}
+                        {% if is_enrolled %}
+                            <a href="{% url 'courses:my_courses' %}" class="btn btn-success btn-lg w-100 mb-3">
+                                <i class="bi bi-check-circle"></i> Cours acheté
+                            </a>
+                        {% else %}
+                            <form method="post" action="{% url 'courses:enroll_course' course.slug %}" class="enroll-form">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-primary btn-lg w-100 mb-3">
+                                    <i class="bi bi-cart-plus"></i> Acheter maintenant
+                                </button>
+                            </form>
+                        {% endif %}
+                    {% else %}
+                        <a href="{% url 'login' %}" class="btn btn-primary btn-lg w-100 mb-3">
+                            <i class="bi bi-cart-plus"></i> Connexion pour acheter
+                        </a>
+                    {% endif %}
+                {% endif %}
+
+                <div class="text-center mb-4">
+                    <small class="text-muted">{{ free_lessons_count }} leçons gratuites disponibles</small>
+                </div>
+
+                <h5 class="mb-3">Ce cours inclut :</h5>
+                <ul class="feature-list">
+                    <li><i class="bi bi-check-circle"></i> {{ total_duration_hours }}h{{ total_duration_minutes }}m de contenu vidéo</li>
+                    <li><i class="bi bi-check-circle"></i> {{ modules.count }} modules structurés</li>
+                    <li><i class="bi bi-check-circle"></i> Accès mobile et desktop</li>
+                    <li><i class="bi bi-check-circle"></i> Accès à vie</li>
+                    <li><i class="bi bi-check-circle"></i> Certificat de completion</li>
+                    <li><i class="bi bi-check-circle"></i> Support communautaire</li>
+                </ul>
+
+                <hr>
+
+                <div class="text-center">
+                    {% if user.is_authenticated %}
+                        <form method="post" action="{% url 'courses:toggle_favorite' course.slug %}" class="d-inline favorite-form">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline-primary btn-sm me-2 {% if is_favorite %}btn-primary text-white{% endif %}">
+                                <i class="bi bi-heart{% if is_favorite %}-fill{% endif %}"></i> 
+                                {% if is_favorite %}Dans les favoris{% else %}Ajouter aux favoris{% endif %}
+                            </button>
+                        </form>
+                    {% else %}
+                        <a href="{% url 'login' %}" class="btn btn-outline-primary btn-sm me-2">
+                            <i class="bi bi-heart"></i> Ajouter aux favoris
+                        </a>
+                    {% endif %}
+                    <button class="btn btn-outline-secondary btn-sm" onclick="shareContent()">
+                        <i class="bi bi-share"></i> Partager
+                    </button>
+                </div>
+            </div>
+
+            <!-- Prérequis -->
+            {% if course.prerequisites %}
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-list-check"></i> Prérequis</h6>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0">{{ course.prerequisites }}</p>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Public cible -->
+            {% if course.target_audience %}
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-people"></i> À qui s'adresse ce cours</h6>
+                </div>
+                <div class="card-body">
+                    <p class="mb-0">{{ course.target_audience }}</p>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Tags -->
+            {% if course.tags.exists %}
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-tags"></i> Mots-clés</h6>
+                </div>
+                <div class="card-body">
+                    {% for tag in course.tags.all %}
+                        <span class="badge bg-light text-dark me-1 mb-1">{{ tag.name }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Cours similaires -->
+    {% if related_courses %}
+    <div class="row mt-5">
+        <div class="col-12">
+            <h2 class="mb-4">Cours similaires</h2>
+            <div class="row">
+                {% for related_course in related_courses %}
+                <div class="col-lg-3 col-md-6 mb-4">
+                    <div class="card h-100">
+                        {% if related_course.thumbnail %}
+                        <img src="{{ related_course.thumbnail.url }}" class="card-img-top" 
+                             alt="{{ related_course.title }}" style="height: 150px; object-fit: cover;">
+                        {% endif %}
+                        <div class="card-body">
+                            <h6 class="card-title">{{ related_course.title|truncatechars:50 }}</h6>
+                            <p class="card-text small text-muted">
+                                Par {{ related_course.instructor.get_full_name|default:related_course.instructor.username }}
+                            </p>
+                            {% if related_course.is_free %}
+                                <span class="badge bg-success">Gratuit</span>
+                            {% else %}
+                                <span class="badge bg-primary">${{ related_course.price }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="card-footer bg-transparent">
+                            <a href="{% url 'courses:course_detail' related_course.slug %}" 
+                               class="btn btn-outline-primary btn-sm w-100">Voir le cours</a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Gestion des formulaires d'inscription avec AJAX
+    const enrollForms = document.querySelectorAll('.enroll-form');
+    enrollForms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const button = form.querySelector('button[type="submit"]');
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i class="bi bi-spinner-border spinner-border-sm"></i> Inscription...';
+            button.disabled = true;
+            
+            fetch(form.action, {
+                method: 'POST',
+                body: new FormData(form),
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': form.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Recharger la page pour voir les changements
+                    location.reload();
+                } else {
+                    alert('Erreur lors de l\'inscription: ' + data.message);
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                alert('Erreur lors de l\'inscription. Veuillez réessayer.');
+                button.innerHTML = originalText;
+                button.disabled = false;
+            });
+        });
+    });
+    
+    // Gestion des favoris avec AJAX
+    const favoriteForms = document.querySelectorAll('.favorite-form');
+    favoriteForms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const button = form.querySelector('button[type="submit"]');
+            const icon = button.querySelector('i');
+            
+            fetch(form.action, {
+                method: 'POST',
+                body: new FormData(form),
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': form.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Mettre à jour l'apparence du bouton
+                    if (data.is_favorite) {
+                        button.classList.add('btn-primary', 'text-white');
+                        button.classList.remove('btn-outline-primary');
+                        icon.classList.add('bi-heart-fill');
+                        icon.classList.remove('bi-heart');
+                        button.innerHTML = '<i class="bi bi-heart-fill"></i> Dans les favoris';
+                    } else {
+                        button.classList.remove('btn-primary', 'text-white');
+                        button.classList.add('btn-outline-primary');
+                        icon.classList.remove('bi-heart-fill');
+                        icon.classList.add('bi-heart');
+                        button.innerHTML = '<i class="bi bi-heart"></i> Ajouter aux favoris';
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                alert('Erreur lors de l\'ajout aux favoris. Veuillez réessayer.');
+            });
+        });
+    });
+});
+
+// Fonction de partage
+function shareContent() {
+    const title = "{{ course.title|escapejs }}";
+    const url = window.location.href;
+    
+    if (navigator.share) {
+        navigator.share({
+            title: title,
+            url: url
+        }).catch(err => console.log('Erreur de partage:', err));
+    } else {
+        // Fallback: copier l'URL dans le presse-papier
+        navigator.clipboard.writeText(url).then(() => {
+            alert('Lien copié dans le presse-papier !');
+        }).catch(() => {
+            // Si ça ne marche pas, afficher l'URL
+            prompt('Copiez ce lien:', url);
+        });
+    }
+}
+</script>
+{% endblock %}

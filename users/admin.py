@@ -105,7 +105,7 @@ class StudentProfileAdmin(admin.ModelAdmin):
 class InstructorProfileAdmin(admin.ModelAdmin):
     list_display = (
         'employee_id', 'user', 'department', 'office_location', 
-        'created_at'
+        'subjects_count', 'created_at'
     )
     list_filter = ('department', 'created_at')
     search_fields = (
@@ -113,7 +113,7 @@ class InstructorProfileAdmin(admin.ModelAdmin):
         'user__last_name', 'user__email', 'department', 'office_location'
     )
     readonly_fields = ('employee_id', 'created_at', 'updated_at')
-    # filter_horizontal = ('subjects_taught',)
+    filter_horizontal = ('subjects_taught',)
     ordering = ('-created_at',)
     
     fieldsets = (
@@ -121,7 +121,7 @@ class InstructorProfileAdmin(admin.ModelAdmin):
             'fields': ('user', 'employee_id')
         }),
         ('Professional Info', {
-            'fields': ('department', 'office_location', 'office_hours')
+            'fields': ('department', 'subjects_taught', 'office_location', 'office_hours')
         }),
         ('Research & Interests', {
             'fields': ('research_interests',)
@@ -132,8 +132,12 @@ class InstructorProfileAdmin(admin.ModelAdmin):
         }),
     )
     
+    def subjects_count(self, obj):
+        return obj.subjects_taught.count()
+    subjects_count.short_description = 'Cours enseignés'
+    
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related('user')
+        return super().get_queryset(request).select_related('user').prefetch_related('subjects_taught')
 
 
 @admin.register(AdminProfile)

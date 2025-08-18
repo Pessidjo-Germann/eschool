@@ -19,11 +19,26 @@
                         Accueil
                     </a>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link modern-link" href="#">
+                <li class="nav-item dropdown">
+                    <a class="nav-link modern-link dropdown-toggle" href="{% url 'courses:courses_list' %}" id="coursesMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                         <i class="bi bi-journal-bookmark me-1"></i>
                         Cours
                     </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{% url 'courses:courses_list' %}">
+                            <i class="bi bi-list me-2"></i>Tous les cours
+                        </a></li>
+                        <li><a class="dropdown-item" href="{% url 'courses:categories_list' %}">
+                            <i class="bi bi-folder me-2"></i>Catégories
+                        </a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{% url 'courses:courses_list' %}?price=free">
+                            <i class="bi bi-gift me-2"></i>Cours gratuits
+                        </a></li>
+                        <li><a class="dropdown-item" href="{% url 'courses:courses_list' %}?difficulty=beginner">
+                            <i class="bi bi-star me-2"></i>Pour débutants
+                        </a></li>
+                    </ul>
                 </li>
 
                 {% if user.is_authenticated %}
@@ -36,9 +51,15 @@
                         </li>
                     {% elif user.is_student %}
                          <li class="nav-item">
-                            <a class="nav-link modern-link" href="#">
+                            <a class="nav-link modern-link" href="{% url 'courses:my_courses' %}">
                                 <i class="bi bi-book me-1"></i>
                                 Mes cours
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link modern-link" href="{% url 'courses:my_favorites' %}">
+                                <i class="bi bi-heart me-1"></i>
+                                Mes favoris
                             </a>
                         </li>
                     {% endif %}

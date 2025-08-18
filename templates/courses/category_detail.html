@@ -1,0 +1,251 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ category.name }} - Catégories - E-School{% endblock %}
+
+{% block extra_head %}
+<style>
+.category-header {
+    background: linear-gradient(135deg, {{ category.color|default:'#667eea' }} 0%, {{ category.color|default:'#764ba2' }} 100%);
+    color: white;
+    padding: 4rem 0;
+}
+.course-card {
+    transition: transform 0.2s ease-in-out;
+    border: none;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    border-radius: 15px;
+    overflow: hidden;
+}
+.course-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+.subcategory-card {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 1.5rem;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+.subcategory-card:hover {
+    background: #e9ecef;
+    transform: translateY(-2px);
+}
+.category-stats {
+    background: rgba(255,255,255,0.2);
+    border-radius: 15px;
+    padding: 2rem;
+    backdrop-filter: blur(10px);
+}
+.stat-item {
+    text-align: center;
+}
+.stat-number {
+    font-size: 2rem;
+    font-weight: bold;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- En-tête de la catégorie -->
+<div class="category-header">
+    <div class="container">
+        <nav aria-label="breadcrumb" class="mb-3">
+            <ol class="breadcrumb text-light">
+                <li class="breadcrumb-item">
+                    <a href="{% url 'courses:courses_list' %}" class="text-light">Cours</a>
+                </li>
+                <li class="breadcrumb-item">
+                    <a href="{% url 'courses:categories_list' %}" class="text-light">Catégories</a>
+                </li>
+                <li class="breadcrumb-item active text-light">{{ category.name }}</li>
+            </ol>
+        </nav>
+
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <div class="d-flex align-items-center mb-3">
+                    <i class="{{ category.icon|default:'bi-folder' }} me-3" style="font-size: 3rem;"></i>
+                    <div>
+                        <h1 class="display-5 mb-0">{{ category.name }}</h1>
+                        <p class="lead mb-0">{{ category.description }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="category-stats">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="stat-item">
+                                <div class="stat-number">{{ total_courses }}</div>
+                                <small>Cours</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="stat-item">
+                                <div class="stat-number">{{ subcategories.count }}</div>
+                                <small>Sous-catégories</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container py-5">
+    <!-- Sous-catégories -->
+    {% if subcategories %}
+    <section class="mb-5">
+        <h2 class="mb-4">Sous-catégories</h2>
+        <div class="row">
+            {% for subcategory in subcategories %}
+            <div class="col-lg-3 col-md-6 mb-3">
+                <a href="{% url 'courses:category_detail' subcategory.slug %}" 
+                   class="text-decoration-none">
+                    <div class="subcategory-card">
+                        <i class="{{ subcategory.icon|default:'bi-folder' }} mb-2 text-primary" 
+                           style="font-size: 2rem;"></i>
+                        <h5 class="mb-1">{{ subcategory.name }}</h5>
+                        <small class="text-muted">{{ subcategory.course_count }} cours</small>
+                    </div>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- Liste des cours -->
+    <section>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>Cours de {{ category.name }}</h2>
+            <span class="badge bg-primary fs-6">{{ total_courses }} cours trouvé{{ total_courses|pluralize }}</span>
+        </div>
+
+        {% if courses %}
+        <div class="row">
+            {% for course in courses %}
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="card course-card h-100">
+                    {% if course.thumbnail %}
+                    <img src="{{ course.thumbnail.url }}" class="card-img-top" 
+                         alt="{{ course.title }}" style="height: 200px; object-fit: cover;">
+                    {% else %}
+                    <div class="card-img-top d-flex align-items-center justify-content-center bg-light" 
+                         style="height: 200px;">
+                        <i class="bi bi-book text-muted" style="font-size: 3rem;"></i>
+                    </div>
+                    {% endif %}
+
+                    <div class="card-body d-flex flex-column">
+                        <div class="mb-2">
+                            {% if course.is_free %}
+                                <span class="badge bg-success">Gratuit</span>
+                            {% else %}
+                                <span class="badge bg-primary">${{ course.price }}</span>
+                            {% endif %}
+                            {% if course.is_featured %}
+                                <span class="badge bg-warning">
+                                    <i class="bi bi-star-fill"></i> Populaire
+                                </span>
+                            {% endif %}
+                        </div>
+
+                        <h5 class="card-title">{{ course.title }}</h5>
+                        <p class="card-text text-muted small mb-2">
+                            Par {{ course.instructor.get_full_name|default:course.instructor.username }}
+                        </p>
+                        <p class="card-text">{{ course.short_description|truncatechars:100 }}</p>
+
+                        <div class="mt-auto">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <small class="text-muted">
+                                    <i class="bi bi-clock"></i> {{ course.estimated_duration }}
+                                </small>
+                                <small class="text-muted">
+                                    <i class="bi bi-signal"></i> {{ course.get_difficulty_display }}
+                                </small>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <small class="text-muted">
+                                    <i class="bi bi-people"></i> {{ course.enrollment_count }} inscrits
+                                </small>
+                                <div>
+                                    <i class="bi bi-star-fill text-warning"></i>
+                                    <small>4.5</small>
+                                </div>
+                            </div>
+
+                            <a href="{% url 'courses:course_detail' course.slug %}" 
+                               class="btn btn-primary w-100">
+                                <i class="bi bi-eye"></i> Voir le cours
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+        <nav aria-label="Navigation des cours" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1">
+                            <i class="bi bi-chevron-double-left"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                    </li>
+                {% endif %}
+
+                <li class="page-item active">
+                    <span class="page-link">
+                        {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}
+                    </span>
+                </li>
+
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">
+                            <i class="bi bi-chevron-double-right"></i>
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+
+        {% else %}
+        <div class="alert alert-info text-center">
+            <i class="bi bi-info-circle display-4 mb-3"></i>
+            <h4>Aucun cours dans cette catégorie</h4>
+            <p>Il n'y a pas encore de cours dans la catégorie "{{ category.name }}".</p>
+            <div class="mt-3">
+                <a href="{% url 'courses:courses_list' %}" class="btn btn-primary me-2">
+                    <i class="bi bi-list"></i> Voir tous les cours
+                </a>
+                <a href="{% url 'courses:categories_list' %}" class="btn btn-outline-primary">
+                    <i class="bi bi-folder"></i> Autres catégories
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}

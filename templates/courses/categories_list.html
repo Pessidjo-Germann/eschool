@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Catégories de cours - E-School{% endblock %}
+
+{% block extra_head %}
+<style>
+.category-card {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: none;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
+.category-card:hover {
+    transform: translateY(-10px);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.15);
+}
+.category-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 3rem 0;
+}
+.category-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+.category-stats {
+    background: rgba(255,255,255,0.1);
+    border-radius: 10px;
+    padding: 1rem;
+    margin-top: 1rem;
+}
+.course-count-badge {
+    font-size: 1.1rem;
+    font-weight: 600;
+    padding: 0.5rem 1rem;
+    border-radius: 25px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- En-tête -->
+<div class="category-header">
+    <div class="container text-center">
+        <h1 class="display-4 mb-3">Explorez nos catégories</h1>
+        <p class="lead">Découvrez une large gamme de sujets d'apprentissage</p>
+    </div>
+</div>
+
+<div class="container py-5">
+    <div class="row">
+        {% for category in categories %}
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card category-card h-100">
+                <div class="card-body text-center p-4">
+                    <div class="category-icon text-primary">
+                        <i class="{{ category.icon|default:'bi-folder' }}"></i>
+                    </div>
+                    <h4 class="card-title mb-3">{{ category.name }}</h4>
+                    <p class="card-text text-muted mb-3">{{ category.description }}</p>
+                    
+                    <div class="category-stats">
+                        <span class="badge bg-light text-dark course-count-badge">
+                            {{ category.course_count }} cours disponible{{ category.course_count|pluralize }}
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="card-footer bg-transparent border-0 text-center pb-4">
+                    <a href="{% url 'courses:category_detail' category.slug %}" 
+                       class="btn btn-primary btn-lg"
+                       style="background-color: {{ category.color|default:'#007bff' }}; border-color: {{ category.color|default:'#007bff' }};">
+                        <i class="bi bi-arrow-right-circle me-2"></i>
+                        Découvrir les cours
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-info text-center">
+                <i class="bi bi-info-circle display-4 mb-3"></i>
+                <h4>Aucune catégorie disponible</h4>
+                <p>Les catégories de cours seront bientôt disponibles.</p>
+                <a href="{% url 'courses:courses_list' %}" class="btn btn-primary">
+                    Voir tous les cours
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
