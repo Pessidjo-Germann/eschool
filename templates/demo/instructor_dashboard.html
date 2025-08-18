@@ -1,0 +1,85 @@
+{% extends 'base.html' %}
+
+{% block title %}Tableau de bord Instructeur - eSchool{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3">
+                    <i class="bi bi-mortarboard me-2"></i>
+                    Tableau de bord Instructeur
+                </h1>
+                <div class="badge bg-warning fs-6">{{ user.get_role_display }}</div>
+            </div>
+
+            <div class="alert alert-warning" role="alert">
+                <i class="bi bi-shield-check me-2"></i>
+                <strong>Accès autorisé !</strong> Vous avez accès à cette page en tant qu'instructeur.
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <i class="bi bi-journal-text me-2"></i>
+                                Mes Cours
+                            </h5>
+                            <p class="card-text">Cours créés: <strong>{{ courses_created }}</strong></p>
+                            <p class="card-text">Étudiants totaux: <strong>{{ total_students }}</strong></p>
+                            <div class="progress">
+                                <div class="progress-bar bg-warning" role="progressbar" style="width: 75%" aria-valuenow="75" aria-valuemax="100">75% d'engagement</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6 mb-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <i class="bi bi-person-badge me-2"></i>
+                                Profil Instructeur
+                            </h5>
+                            <p class="card-text"><strong>Nom:</strong> {{ user.get_full_name|default:user.username }}</p>
+                            <p class="card-text"><strong>Email:</strong> {{ user.email }}</p>
+                            <p class="card-text"><strong>Spécialisation:</strong> {{ user.specialization|default:"Non définie" }}</p>
+                            <p class="card-text"><strong>Expérience:</strong> {{ user.experience_years }} ans</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Fonctionnalités Disponibles
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">✅ Création et gestion de cours</li>
+                        <li class="list-group-item">✅ Création de quiz et examens</li>
+                        <li class="list-group-item">✅ Suivi des étudiants</li>
+                        <li class="list-group-item">✅ Génération de rapports</li>
+                        <li class="list-group-item">✅ Communication avec les étudiants</li>
+                        <li class="list-group-item">❌ Gestion des utilisateurs (réservé aux admins)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <a href="{% url 'home' %}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left me-2"></i>Retour à l'accueil
+                </a>
+                <a href="#" class="btn btn-warning ms-2">
+                    <i class="bi bi-plus-circle me-2"></i>Créer un nouveau cours
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
