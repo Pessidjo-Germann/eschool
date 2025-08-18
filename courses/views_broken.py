@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 from django.shortcuts import render, get_object_or_404, redirect
 from django.core.paginator import Paginator
 from django.db.models import Q, Count, Avg
@@ -11,7 +10,7 @@ from .models import Course, Category, Tag, Module, Lesson, Enrollment, CourseFav
 
 
 def courses_list(request):
-    """Liste tous les cours publies avec filtres et recherche"""
+    """Liste tous les cours publiés avec filtres et recherche"""
     courses = Course.objects.filter(status='published').select_related(
         'category', 'instructor'
     ).prefetch_related('tags')
@@ -27,7 +26,7 @@ def courses_list(request):
             Q(instructor__last_name__icontains=search_query)
         )
     
-    # Filtrage par categorie
+    # Filtrage par catégorie
     category_slug = request.GET.get('category')
     selected_category = None
     if category_slug:
@@ -37,7 +36,7 @@ def courses_list(request):
         except Category.DoesNotExist:
             pass
     
-    # Filtrage par niveau de difficulte
+    # Filtrage par niveau de difficulté
     difficulty = request.GET.get('difficulty')
     if difficulty and difficulty in dict(Course.DIFFICULTY_CHOICES):
         courses = courses.filter(difficulty=difficulty)
@@ -62,7 +61,7 @@ def courses_list(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
-    # Donnees pour les filtres
+    # Données pour les filtres
     categories = Category.objects.filter(is_active=True, courses__status='published').annotate(
         course_count=Count('courses', filter=Q(courses__status='published'))
     ).distinct()
@@ -84,7 +83,7 @@ def courses_list(request):
 
 
 def course_detail(request, slug):
-    """Detail d'un cours avec ses modules et lecons"""
+    """Détail d'un cours avec ses modules et leçons"""
     course = get_object_or_404(
         Course.objects.select_related('category', 'instructor').prefetch_related(
             'tags', 'co_instructors', 
@@ -94,7 +93,7 @@ def course_detail(request, slug):
         status='published'
     )
     
-    # Verifier les permissions d'acces
+    # Vérifier les permissions d'accès
     user = request.user
     can_access_full_content = False
     is_enrolled = False
@@ -102,7 +101,7 @@ def course_detail(request, slug):
     enrollment = None
     
     if user.is_authenticated:
-        # Verifier si l'utilisateur est inscrit
+        # Vérifier si l'utilisateur est inscrit
         try:
             enrollment = Enrollment.objects.get(user=user, course=course, status='active')
             is_enrolled = True
@@ -110,25 +109,25 @@ def course_detail(request, slug):
         except Enrollment.DoesNotExist:
             pass
         
-        # Verifier si le cours est en favoris
+        # Vérifier si le cours est en favoris
         is_favorite = CourseFavorite.objects.filter(user=user, course=course).exists()
         
-        # Donner acces aux instructeurs et admins
+        # Donner accès aux instructeurs et admins
         if user.is_instructor or user.is_admin or user == course.instructor:
             can_access_full_content = True
     
-    # Modules et lecons
+    # Modules et leçons
     modules = course.modules.filter(is_published=True).prefetch_related(
         'lessons'
     ).order_by('order')
     
-    # Compter les lecons gratuites (preview)
+    # Compter les leçons gratuites (preview)
     free_lessons_count = sum(
         module.lessons.filter(is_preview=True, is_published=True).count() 
         for module in modules
     )
     
-    # Cours similaires (meme categorie)
+    # Cours similaires (même catégorie)
     related_courses = Course.objects.filter(
         category=course.category,
         status='published'
@@ -151,7 +150,7 @@ def course_detail(request, slug):
 
 
 def lesson_detail(request, course_slug, lesson_id):
-    """Affichage d'une lecon individuelle"""
+    """Affichage d'une leçon individuelle"""
     course = get_object_or_404(Course, slug=course_slug, status='published')
     lesson = get_object_or_404(
         Lesson.objects.select_related('module'),
@@ -160,25 +159,25 @@ def lesson_detail(request, course_slug, lesson_id):
         is_published=True
     )
     
-    # Verifier les permissions d'acces
+    # Vérifier les permissions d'accès
     user = request.user
     can_access = False
     
     if lesson.is_preview:
-        # Lecons gratuites accessibles a tous
+        # Leçons gratuites accessibles à tous
         can_access = True
     elif user.is_authenticated:
-        # Verifier si l'utilisateur est inscrit ou est l'instructeur
+        # Vérifier si l'utilisateur est inscrit ou est l'instructeur
         if user.is_instructor or user.is_admin or user == course.instructor:
             can_access = True
-        # TODO: Verifier l'inscription au cours
+        # TODO: Vérifier l'inscription au cours
         # elif user.enrollments.filter(course=course).exists():
         #     can_access = True
     
     if not can_access:
-        raise Http404("Vous n'avez pas acces a cette lecon.")
+        raise Http404("Vous n'avez pas accès à cette leçon.")
     
-    # Navigation entre lecons
+    # Navigation entre leçons
     module = lesson.module
     all_lessons = list(module.lessons.filter(is_published=True).order_by('order'))
     current_index = all_lessons.index(lesson)
@@ -186,7 +185,7 @@ def lesson_detail(request, course_slug, lesson_id):
     previous_lesson = all_lessons[current_index - 1] if current_index > 0 else None
     next_lesson = all_lessons[current_index + 1] if current_index < len(all_lessons) - 1 else None
     
-    # Si pas de lecon suivante dans ce module, chercher dans le module suivant
+    # Si pas de leçon suivante dans ce module, chercher dans le module suivant
     if not next_lesson:
         next_modules = course.modules.filter(
             order__gt=module.order, 
@@ -213,7 +212,7 @@ def lesson_detail(request, course_slug, lesson_id):
 
 
 def categories_list(request):
-    """Liste des categories avec leurs cours"""
+    """Liste des catégories avec leurs cours"""
     categories = Category.objects.filter(
         is_active=True,
         courses__status='published'
@@ -229,7 +228,7 @@ def categories_list(request):
 
 
 def category_detail(request, slug):
-    """Detail d'une categorie avec ses cours"""
+    """Détail d'une catégorie avec ses cours"""
     category = get_object_or_404(Category, slug=slug, is_active=True)
     
     courses = Course.objects.filter(
@@ -242,7 +241,7 @@ def category_detail(request, slug):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
-    # Sous-categories
+    # Sous-catégories
     subcategories = category.subcategories.filter(
         is_active=True,
         courses__status='published'
@@ -264,10 +263,10 @@ def category_detail(request, slug):
 @login_required
 @require_POST
 def enroll_course(request, slug):
-    """Inscription a un cours"""
+    """Inscription à un cours"""
     course = get_object_or_404(Course, slug=slug, status='published')
     
-    # Verifier si l'utilisateur est deja inscrit
+    # Vérifier si l'utilisateur est déjà inscrit
     enrollment, created = Enrollment.objects.get_or_create(
         user=request.user,
         course=course,
@@ -282,25 +281,25 @@ def enroll_course(request, slug):
         if course.is_free:
             messages.success(
                 request, 
-                f"Vous etes maintenant inscrit au cours '{course.title}' !"
+                f"Vous êtes maintenant inscrit au cours '{course.title}' !"
             )
         else:
             messages.info(
                 request,
-                f"Inscription initiee pour '{course.title}'. Procedez au paiement pour acceder au contenu."
+                f"Inscription initiée pour '{course.title}'. Procédez au paiement pour accéder au contenu."
             )
         
-        # Mettre a jour le compteur d'inscriptions
+        # Mettre à jour le compteur d'inscriptions
         course.enrollment_count += 1
         course.save()
     else:
-        messages.info(request, "Vous etes deja inscrit a ce cours.")
+        messages.info(request, "Vous êtes déjà inscrit à ce cours.")
     
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return JsonResponse({
             'success': True,
             'enrolled': True,
-            'message': "Inscription reussie !" if created else "Deja inscrit"
+            'message': "Inscription réussie !" if created else "Déjà inscrit"
         })
     
     return redirect('courses:course_detail', slug=course.slug)
@@ -320,10 +319,10 @@ def toggle_favorite(request, slug):
     if not created:
         favorite.delete()
         is_favorite = False
-        message = f"'{course.title}' retire de vos favoris."
+        message = f"'{course.title}' retiré de vos favoris."
     else:
         is_favorite = True
-        message = f"'{course.title}' ajoute a vos favoris !"
+        message = f"'{course.title}' ajouté à vos favoris !"
     
     messages.success(request, message)
     
