@@ -104,7 +104,7 @@ class InstructorProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='instructor_profile')
     employee_id = models.CharField(max_length=20, unique=True)
     department = models.CharField(max_length=100, blank=True)
-    # subjects_taught = models.ManyToManyField('courses.Course', blank=True, related_name='instructors')
+    subjects_taught = models.ManyToManyField('courses.Course', blank=True, related_name='instructors')
     office_location = models.CharField(max_length=100, blank=True)
     office_hours = models.TextField(blank=True)
     research_interests = models.TextField(blank=True)

@@ -1,0 +1,425 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ lesson.title }} - {{ course.title }} - E-School{% endblock %}
+
+{% block extra_css %}
+<style>
+.lesson-header {
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+    color: white;
+    padding: 1.5rem 0;
+}
+.lesson-content {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+    padding: 2rem;
+    margin: 2rem 0;
+}
+.lesson-nav {
+    position: sticky;
+    top: 20px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+    padding: 1.5rem;
+}
+.progress-bar {
+    height: 8px;
+    border-radius: 4px;
+}
+.video-container {
+    position: relative;
+    width: 100%;
+    height: 0;
+    padding-bottom: 56.25%; /* 16:9 aspect ratio */
+    background: #000;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 2rem;
+}
+.video-placeholder {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    text-align: center;
+}
+.lesson-meta {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 2rem;
+}
+.navigation-btn {
+    border-radius: 25px;
+    padding: 0.75rem 1.5rem;
+    font-weight: 500;
+}
+.module-overview {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+.lesson-list-item {
+    padding: 0.5rem 0.75rem;
+    margin: 0.25rem 0;
+    border-radius: 5px;
+    transition: background-color 0.2s;
+}
+.lesson-list-item:hover {
+    background: #e9ecef;
+}
+.lesson-list-item.active {
+    background: #007bff;
+    color: white;
+}
+.lesson-list-item.completed {
+    background: #28a745;
+    color: white;
+}
+.lesson-resources {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 2rem;
+}
+.note-taking {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-top: 2rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- En-tête de la leçon -->
+<div class="lesson-header">
+    <div class="container">
+        <nav aria-label="breadcrumb" class="mb-2">
+            <ol class="breadcrumb text-light mb-0">
+                <li class="breadcrumb-item">
+                    <a href="{% url 'courses:courses_list' %}" class="text-light">Cours</a>
+                </li>
+                <li class="breadcrumb-item">
+                    <a href="{% url 'courses:course_detail' course.slug %}" class="text-light">{{ course.title|truncatechars:30 }}</a>
+                </li>
+                <li class="breadcrumb-item active text-light">{{ lesson.title|truncatechars:40 }}</li>
+            </ol>
+        </nav>
+
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <h1 class="h3 mb-2">{{ lesson.title }}</h1>
+                <p class="mb-2">Module {{ module.order }}: {{ module.title }}</p>
+                <small>
+                    Leçon {{ lesson_number }} sur {{ total_lessons_in_module }} de ce module
+                    {% if lesson.is_preview %}
+                        <span class="badge bg-success ms-2">Aperçu gratuit</span>
+                    {% endif %}
+                </small>
+            </div>
+            <div class="col-lg-4 text-lg-end">
+                <div class="d-flex justify-content-lg-end align-items-center gap-2">
+                    <small class="text-light me-2">Progression:</small>
+                    <div class="progress" style="width: 150px;">
+                        <div class="progress-bar bg-success" role="progressbar" 
+                             style="width: 25%" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <small class="text-light">25%</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid py-4">
+    <div class="row">
+        <!-- Contenu principal de la leçon -->
+        <div class="col-lg-8">
+            <div class="lesson-content">
+                <!-- Métadonnées de la leçon -->
+                <div class="lesson-meta">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-clock text-muted me-1"></i>
+                                    <small>
+                                        {% if lesson.duration %}
+                                            {{ lesson.duration }}
+                                        {% else %}
+                                            ~5 minutes
+                                        {% endif %}
+                                    </small>
+                                </div>
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-file-text text-muted me-1"></i>
+                                    <small>{{ lesson.get_lesson_type_display }}</small>
+                                </div>
+                                {% if lesson.is_preview %}
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-unlock text-success me-1"></i>
+                                    <small class="text-success">Accès libre</small>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-md-end">
+                            <button class="btn btn-outline-primary btn-sm me-2" title="Marquer comme terminé">
+                                <i class="bi bi-check-circle"></i>
+                            </button>
+                            <button class="btn btn-outline-secondary btn-sm" title="Ajouter aux favoris">
+                                <i class="bi bi-bookmark"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contenu vidéo (placeholder) -->
+                {% if lesson.lesson_type == 'video' %}
+                <div class="video-container">
+                    <div class="video-placeholder">
+                        <i class="bi bi-play-circle" style="font-size: 4rem; opacity: 0.7;"></i>
+                        <p class="mt-2">Contenu vidéo à venir</p>
+                        <small>{{ lesson.title }}</small>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Contenu de la leçon -->
+                <div class="lesson-body">
+                    {% if lesson.lesson_type == 'text' %}
+                        <div class="content-text">
+                            {{ lesson.content|linebreaks }}
+                        </div>
+                    {% elif lesson.lesson_type == 'video' %}
+                        <div class="content-description">
+                            <h4>Description de la vidéo</h4>
+                            {% if lesson.content %}
+                                {{ lesson.content|linebreaks }}
+                            {% else %}
+                                <p class="text-muted">Description à venir...</p>
+                            {% endif %}
+                        </div>
+                    {% elif lesson.lesson_type == 'quiz' %}
+                        <div class="content-quiz">
+                            <h4><i class="bi bi-question-circle"></i> Quiz interactif</h4>
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle"></i>
+                                Le système de quiz sera bientôt disponible.
+                            </div>
+                            {% if lesson.content %}
+                                {{ lesson.content|linebreaks }}
+                            {% endif %}
+                        </div>
+                    {% else %}
+                        <div class="content-mixed">
+                            {{ lesson.content|linebreaks|default:"Contenu en cours de préparation..." }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Ressources additionnelles -->
+                {% if lesson.resources.exists %}
+                <div class="lesson-resources">
+                    <h5><i class="bi bi-folder-plus"></i> Ressources complémentaires</h5>
+                    <ul class="list-unstyled mb-0">
+                        {% for resource in lesson.resources.all %}
+                        <li class="mb-2">
+                            <i class="bi bi-file-earmark-{{ resource.resource_type }} me-2"></i>
+                            <a href="{{ resource.file.url }}" target="_blank" class="text-decoration-none">
+                                {{ resource.title }}
+                            </a>
+                            {% if resource.description %}
+                                <small class="text-muted d-block ms-4">{{ resource.description }}</small>
+                            {% endif %}
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                <!-- Prise de notes -->
+                <div class="note-taking">
+                    <h5><i class="bi bi-journal-text"></i> Mes notes</h5>
+                    <div class="form-group">
+                        <textarea class="form-control" rows="4" 
+                                  placeholder="Prenez des notes sur cette leçon..."></textarea>
+                    </div>
+                    <div class="mt-2">
+                        <button class="btn btn-primary btn-sm">
+                            <i class="bi bi-save"></i> Sauvegarder
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Navigation entre leçons -->
+                <div class="d-flex justify-content-between align-items-center mt-4 pt-4 border-top">
+                    <div>
+                        {% if previous_lesson %}
+                            <a href="{% url 'courses:lesson_detail' course.slug previous_lesson.id %}" 
+                               class="btn btn-outline-primary navigation-btn">
+                                <i class="bi bi-arrow-left me-2"></i>Leçon précédente
+                            </a>
+                        {% else %}
+                            <span class="text-muted">
+                                <i class="bi bi-arrow-left me-2"></i>Première leçon
+                            </span>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <a href="{% url 'courses:course_detail' course.slug %}" 
+                           class="btn btn-outline-secondary navigation-btn">
+                            <i class="bi bi-list-ul me-2"></i>Retour au cours
+                        </a>
+                    </div>
+                    <div>
+                        {% if next_lesson %}
+                            <a href="{% url 'courses:lesson_detail' course.slug next_lesson.id %}" 
+                               class="btn btn-primary navigation-btn">
+                                Leçon suivante<i class="bi bi-arrow-right ms-2"></i>
+                            </a>
+                        {% else %}
+                            <span class="text-muted">
+                                Dernière leçon<i class="bi bi-arrow-right ms-2"></i>
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar de navigation -->
+        <div class="col-lg-4">
+            <div class="lesson-nav">
+                <h5 class="mb-3">
+                    <i class="bi bi-list-ul"></i> Navigation du cours
+                </h5>
+
+                <!-- Informations du cours -->
+                <div class="module-overview">
+                    <h6 class="mb-2">{{ course.title }}</h6>
+                    <div class="progress mb-2">
+                        <div class="progress-bar" role="progressbar" style="width: 25%"></div>
+                    </div>
+                    <small class="text-muted">3 sur 12 leçons terminées</small>
+                </div>
+
+                <!-- Module actuel -->
+                <div class="mb-3">
+                    <h6 class="text-primary">
+                        <i class="bi bi-collection"></i>
+                        {{ module.title }}
+                    </h6>
+                    <small class="text-muted d-block mb-2">{{ module.description }}</small>
+
+                    <!-- Liste des leçons du module -->
+                    <div class="lesson-navigation">
+                        {% for mod_lesson in module.lessons.all %}
+                        <div class="lesson-list-item {% if mod_lesson.id == lesson.id %}active{% endif %}">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    {% if mod_lesson.is_preview or can_access_full_content %}
+                                        <a href="{% url 'courses:lesson_detail' course.slug mod_lesson.id %}" 
+                                           class="text-decoration-none {% if mod_lesson.id == lesson.id %}text-white{% endif %}">
+                                            <i class="bi bi-play-circle me-1"></i>
+                                            {{ mod_lesson.title|truncatechars:30 }}
+                                        </a>
+                                    {% else %}
+                                        <span class="text-muted">
+                                            <i class="bi bi-lock-fill me-1"></i>
+                                            {{ mod_lesson.title|truncatechars:30 }}
+                                        </span>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    {% if mod_lesson.is_preview %}
+                                        <i class="bi bi-unlock-fill text-success"></i>
+                                    {% endif %}
+                                    <!-- Icône de completion à implémenter -->
+                                    <!-- <i class="bi bi-check-circle-fill text-success"></i> -->
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Autres modules (aperçu) -->
+                {% for other_module in course.modules.all %}
+                    {% if other_module.id != module.id %}
+                    <div class="mb-3">
+                        <h6 class="text-muted">
+                            <i class="bi bi-collection"></i>
+                            {{ other_module.title }}
+                        </h6>
+                        <small class="text-muted">{{ other_module.lessons.count }} leçons</small>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+
+                <!-- Actions rapides -->
+                <hr>
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-download"></i> Télécharger les ressources
+                    </button>
+                    <button class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-question-circle"></i> Poser une question
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-scroll vers la leçon active dans la navigation
+    const activeLesson = document.querySelector('.lesson-list-item.active');
+    if (activeLesson) {
+        activeLesson.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    // Gestion des boutons d'action
+    const completeBtn = document.querySelector('button[title="Marquer comme terminé"]');
+    if (completeBtn) {
+        completeBtn.addEventListener('click', function() {
+            this.classList.toggle('btn-outline-primary');
+            this.classList.toggle('btn-success');
+            const icon = this.querySelector('i');
+            icon.classList.toggle('bi-check-circle');
+            icon.classList.toggle('bi-check-circle-fill');
+        });
+    }
+
+    // Gestion de la sauvegarde des notes
+    const saveNotesBtn = document.querySelector('.note-taking .btn-primary');
+    if (saveNotesBtn) {
+        saveNotesBtn.addEventListener('click', function() {
+            const textarea = document.querySelector('.note-taking textarea');
+            if (textarea.value.trim()) {
+                // Ici on pourrait sauvegarder via AJAX
+                this.innerHTML = '<i class="bi bi-check"></i> Sauvegardé !';
+                this.classList.remove('btn-primary');
+                this.classList.add('btn-success');
+                
+                setTimeout(() => {
+                    this.innerHTML = '<i class="bi bi-save"></i> Sauvegarder';
+                    this.classList.remove('btn-success');
+                    this.classList.add('btn-primary');
+                }, 2000);
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

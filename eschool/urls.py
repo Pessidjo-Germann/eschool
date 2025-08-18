@@ -25,6 +25,7 @@ urlpatterns = [
     path('accounts/profile/', RedirectView.as_view(url='/users/profile/', permanent=False)),
     path('users/', include('users.urls')),
     path('api/users/', include('users.api_urls')),
+    path('courses/', include('courses.urls')),
     path('', include('core.urls')),
 ]
 
