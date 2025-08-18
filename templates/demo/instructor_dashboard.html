@@ -11,7 +11,12 @@
                     <i class="bi bi-mortarboard me-2"></i>
                     Tableau de bord Instructeur
                 </h1>
-                <div class="badge bg-warning fs-6">{{ user.get_role_display }}</div>
+                <div class="d-flex align-items-center gap-3">
+                    <a href="{% url 'users:profile' %}" class="btn btn-outline-warning btn-sm">
+                        <i class="bi bi-person-gear me-1"></i>Mon Profil
+                    </a>
+                    <div class="badge bg-warning fs-6">{{ user.get_role_display }}</div>
+                </div>
             </div>
 
             <div class="alert alert-warning" role="alert">
@@ -39,14 +44,57 @@
                 <div class="col-md-6 mb-4">
                     <div class="card">
                         <div class="card-body">
-                            <h5 class="card-title">
-                                <i class="bi bi-person-badge me-2"></i>
-                                Profil Instructeur
-                            </h5>
-                            <p class="card-text"><strong>Nom:</strong> {{ user.get_full_name|default:user.username }}</p>
-                            <p class="card-text"><strong>Email:</strong> {{ user.email }}</p>
-                            <p class="card-text"><strong>Spécialisation:</strong> {{ user.specialization|default:"Non définie" }}</p>
-                            <p class="card-text"><strong>Expérience:</strong> {{ user.experience_years }} ans</p>
+                            <div class="d-flex justify-content-between align-items-start">
+                                <h5 class="card-title">
+                                    <i class="bi bi-person-badge me-2"></i>
+                                    Profil Instructeur
+                                </h5>
+                                <a href="{% url 'users:edit_profile' %}" class="btn btn-sm btn-outline-secondary" title="Modifier le profil">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                            </div>
+                            
+                            <div class="d-flex align-items-center mb-3">
+                                {% if user.profile_picture %}
+                                    <img src="{{ user.profile_picture.url }}" alt="Avatar" 
+                                         class="rounded-circle me-3" style="width: 60px; height: 60px; object-fit: cover;">
+                                {% else %}
+                                    <div class="bg-warning rounded-circle me-3 d-flex align-items-center justify-content-center" 
+                                         style="width: 60px; height: 60px;">
+                                        <i class="bi bi-person-fill text-white"></i>
+                                    </div>
+                                {% endif %}
+                                <div>
+                                    <h6 class="mb-1">{{ user.get_full_name|default:user.username }}</h6>
+                                    <small class="text-muted">{{ user.email }}</small>
+                                </div>
+                            </div>
+
+                            {% if user.instructor_profile %}
+                                {% if user.instructor_profile.employee_id %}
+                                <div class="mb-2">
+                                    <strong>ID Employé:</strong> <code>{{ user.instructor_profile.employee_id }}</code>
+                                </div>
+                                {% endif %}
+                                {% if user.instructor_profile.department %}
+                                <div class="mb-2">
+                                    <strong>Département:</strong> {{ user.instructor_profile.department }}
+                                </div>
+                                {% endif %}
+                            {% endif %}
+
+                            <div class="mb-2">
+                                <strong>Spécialisation:</strong> {{ user.specialization|default:"Non définie" }}
+                            </div>
+                            <div class="mb-2">
+                                <strong>Expérience:</strong> {{ user.experience_years }} an{{ user.experience_years|pluralize }}
+                            </div>
+
+                            <div class="mt-3">
+                                <a href="{% url 'users:profile' %}" class="btn btn-warning btn-sm">
+                                    <i class="bi bi-eye me-1"></i>Voir profil complet
+                                </a>
+                            </div>
                         </div>
                     </div>
                 </div>

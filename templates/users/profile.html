@@ -1,0 +1,341 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Mon Profil - {{ user.get_full_name|default:user.username }} - eSchool{% endblock %}
+
+{% block extra_head %}
+<style>
+    .profile-avatar {
+        width: 120px;
+        height: 120px;
+        object-fit: cover;
+        border: 3px solid #dee2e6;
+    }
+    .profile-card {
+        border-radius: 15px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    }
+    .badge-role {
+        font-size: 0.75rem;
+        padding: 0.5em 1em;
+    }
+    .info-item {
+        border-bottom: 1px solid #f8f9fa;
+        padding: 0.75rem 0;
+    }
+    .info-item:last-child {
+        border-bottom: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- Header Section -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0 text-dark">Mon Profil</h1>
+                <a href="{% url 'users:edit_profile' %}" class="btn btn-primary">
+                    <i class="bi bi-pencil-square me-2"></i>Modifier le profil
+                </a>
+            </div>
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <div class="row">
+                <!-- Profile Card -->
+                <div class="col-lg-4 mb-4">
+                    <div class="card profile-card">
+                        <div class="card-body text-center">
+                            <!-- Profile Picture -->
+                            {% if user.profile_picture %}
+                                <img src="{{ user.profile_picture.url }}" 
+                                     alt="Photo de profil" 
+                                     class="rounded-circle profile-avatar mb-3">
+                            {% else %}
+                                <div class="bg-secondary rounded-circle profile-avatar mx-auto mb-3 d-flex align-items-center justify-content-center">
+                                    <i class="bi bi-person-fill text-white" style="font-size: 3rem;"></i>
+                                </div>
+                            {% endif %}
+
+                            <!-- Name and Role -->
+                            <h4 class="card-title mb-2">
+                                {{ user.get_full_name|default:user.username }}
+                            </h4>
+                            
+                            <span class="badge bg-primary badge-role mb-3">
+                                {{ user.get_role_display }}
+                            </span>
+
+                            <!-- Basic Info -->
+                            <div class="text-start">
+                                <div class="info-item">
+                                    <small class="text-muted">Nom d'utilisateur</small>
+                                    <div>{{ user.username }}</div>
+                                </div>
+                                <div class="info-item">
+                                    <small class="text-muted">Email</small>
+                                    <div>
+                                        {{ user.email }}
+                                        {% if user.email_verified %}
+                                            <i class="bi bi-patch-check-fill text-success ms-1" title="Email vérifié"></i>
+                                        {% else %}
+                                            <i class="bi bi-exclamation-triangle-fill text-warning ms-1" title="Email non vérifié"></i>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% if user.phone_number %}
+                                <div class="info-item">
+                                    <small class="text-muted">Téléphone</small>
+                                    <div>{{ user.phone_number }}</div>
+                                </div>
+                                {% endif %}
+                                {% if user.date_of_birth %}
+                                <div class="info-item">
+                                    <small class="text-muted">Date de naissance</small>
+                                    <div>{{ user.date_of_birth|date:"d F Y" }}</div>
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="mt-3 d-grid gap-2">
+                                <a href="{% url 'users:edit_profile' %}" class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-pencil me-1"></i>Modifier
+                                </a>
+                                {% if user.profile_picture %}
+                                <form method="post" action="{% url 'users:delete_profile_picture' %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-outline-danger btn-sm w-100" 
+                                            onclick="return confirm('Êtes-vous sûr de vouloir supprimer votre photo de profil ?')">
+                                        <i class="bi bi-trash me-1"></i>Supprimer la photo
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Details Section -->
+                <div class="col-lg-8">
+                    <!-- Bio Section -->
+                    {% if user.bio %}
+                    <div class="card profile-card mb-4">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-chat-left-text me-2"></i>À propos
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="mb-0">{{ user.bio|linebreaks }}</p>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Role-Specific Information -->
+                    {% if profile_type == 'student' and profile %}
+                    <div class="card profile-card mb-4">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-mortarboard me-2"></i>Informations Étudiant
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="info-item">
+                                        <small class="text-muted">ID Étudiant</small>
+                                        <div><code>{{ profile.student_id }}</code></div>
+                                    </div>
+                                    {% if profile.current_grade %}
+                                    <div class="info-item">
+                                        <small class="text-muted">Classe actuelle</small>
+                                        <div>{{ profile.current_grade }}</div>
+                                    </div>
+                                    {% endif %}
+                                    {% if profile.academic_year %}
+                                    <div class="info-item">
+                                        <small class="text-muted">Année académique</small>
+                                        <div>{{ profile.academic_year }}</div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    {% if user.enrollment_date %}
+                                    <div class="info-item">
+                                        <small class="text-muted">Date d'inscription</small>
+                                        <div>{{ user.enrollment_date|date:"d F Y" }}</div>
+                                    </div>
+                                    {% endif %}
+                                    {% if profile.parent_contact %}
+                                    <div class="info-item">
+                                        <small class="text-muted">Contact parent</small>
+                                        <div>{{ profile.parent_contact }}</div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if profile_type == 'instructor' and profile %}
+                    <div class="card profile-card mb-4">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-person-badge me-2"></i>Informations Enseignant
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="info-item">
+                                        <small class="text-muted">ID Employé</small>
+                                        <div><code>{{ profile.employee_id }}</code></div>
+                                    </div>
+                                    {% if profile.department %}
+                                    <div class="info-item">
+                                        <small class="text-muted">Département</small>
+                                        <div>{{ profile.department }}</div>
+                                    </div>
+                                    {% endif %}
+                                    {% if user.specialization %}
+                                    <div class="info-item">
+                                        <small class="text-muted">Spécialisation</small>
+                                        <div>{{ user.specialization }}</div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="info-item">
+                                        <small class="text-muted">Années d'expérience</small>
+                                        <div>{{ user.experience_years }} an{{ user.experience_years|pluralize }}</div>
+                                    </div>
+                                    {% if profile.office_location %}
+                                    <div class="info-item">
+                                        <small class="text-muted">Bureau</small>
+                                        <div>{{ profile.office_location }}</div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            {% if user.qualifications %}
+                            <div class="mt-3">
+                                <small class="text-muted">Qualifications</small>
+                                <div>{{ user.qualifications|linebreaks }}</div>
+                            </div>
+                            {% endif %}
+                            
+                            {% if profile.office_hours %}
+                            <div class="mt-3">
+                                <small class="text-muted">Heures de bureau</small>
+                                <div>{{ profile.office_hours|linebreaks }}</div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if profile_type == 'admin' and profile %}
+                    <div class="card profile-card mb-4">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-shield-check me-2"></i>Informations Administrateur
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="info-item">
+                                        <small class="text-muted">ID Admin</small>
+                                        <div><code>{{ profile.admin_id }}</code></div>
+                                    </div>
+                                    <div class="info-item">
+                                        <small class="text-muted">Niveau de permissions</small>
+                                        <div>
+                                            <span class="badge bg-{% if profile.permission_level == 'super' %}danger{% elif profile.permission_level == 'advanced' %}warning{% else %}secondary{% endif %}">
+                                                {{ profile.get_permission_level_display }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    {% if profile.department %}
+                                    <div class="info-item">
+                                        <small class="text-muted">Département</small>
+                                        <div>{{ profile.department }}</div>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            {% if profile.responsibilities %}
+                            <div class="mt-3">
+                                <small class="text-muted">Responsabilités</small>
+                                <div>{{ profile.responsibilities|linebreaks }}</div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Account Information -->
+                    <div class="card profile-card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="bi bi-info-circle me-2"></i>Informations du compte
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="info-item">
+                                        <small class="text-muted">Membre depuis</small>
+                                        <div>{{ user.date_joined|date:"d F Y" }}</div>
+                                    </div>
+                                    <div class="info-item">
+                                        <small class="text-muted">Dernière connexion</small>
+                                        <div>
+                                            {% if user.last_login %}
+                                                {{ user.last_login|date:"d F Y à H:i" }}
+                                            {% else %}
+                                                <em class="text-muted">Jamais connecté</em>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="info-item">
+                                        <small class="text-muted">Statut du compte</small>
+                                        <div>
+                                            {% if user.is_active %}
+                                                <span class="badge bg-success">Actif</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">Inactif</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="info-item">
+                                        <small class="text-muted">Dernière mise à jour</small>
+                                        <div>{{ user.updated_at|date:"d F Y à H:i" }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

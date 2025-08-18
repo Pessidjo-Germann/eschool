@@ -1,5 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.views.generic import TemplateView
+from django.views.generic import TemplateView, RedirectView
 from django.contrib.auth.views import (
     LoginView as DjangoLoginView, 
     LogoutView as DjangoLogoutView,
@@ -33,10 +33,17 @@ class HomeView(TemplateView):
             context['user_dashboard'] = True
         return context
 
+class ProfileRedirectView(RedirectView):
+    """Redirect /accounts/profile/ to home page"""
+    permanent = True
+    pattern_name = 'home'
+
 class LoginView(DjangoLoginView):
     template_name = 'auth/login.html'
     redirect_authenticated_user = True
-    success_url = reverse_lazy('home')
+    
+    def get_success_url(self):
+        return reverse_lazy('home')
     
     def form_valid(self, form):
         messages.success(self.request, f'Bienvenue {form.get_user().username} !')
@@ -149,6 +156,20 @@ class EmailVerificationView(View):
 
 
 # Demo views for role-based permissions
+
+@login_required
+def dashboard_redirect(request):
+    """Redirect to appropriate dashboard based on user role"""
+    user = request.user
+    if user.is_student:
+        return redirect('student_dashboard')
+    elif user.is_instructor:
+        return redirect('instructor_dashboard')  
+    elif user.is_admin:
+        return redirect('admin_dashboard')
+    else:
+        messages.warning(request, 'Aucun tableau de bord disponible pour votre rôle.')
+        return redirect('home')
 
 @student_required
 def student_dashboard(request):
