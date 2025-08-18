@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+
+{% block title %}Tableau de bord Admin - eSchool{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3">
+                    <i class="bi bi-shield-lock me-2"></i>
+                    Tableau de bord Administrateur
+                </h1>
+                <div class="badge bg-danger fs-6">{{ user.get_role_display }}</div>
+            </div>
+
+            <div class="alert alert-danger" role="alert">
+                <i class="bi bi-shield-check me-2"></i>
+                <strong>Accès autorisé !</strong> Vous avez les privilèges d'administrateur.
+            </div>
+
+            <div class="row">
+                <div class="col-md-4 mb-4">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <i class="bi bi-people-fill fs-1 text-primary"></i>
+                            <h5 class="card-title mt-3">Utilisateurs Totaux</h5>
+                            <h2 class="text-primary">{{ total_users }}</h2>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4 mb-4">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <i class="bi bi-person-circle fs-1 text-success"></i>
+                            <h5 class="card-title mt-3">Étudiants</h5>
+                            <h2 class="text-success">{{ total_students }}</h2>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4 mb-4">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <i class="bi bi-mortarboard-fill fs-1 text-warning"></i>
+                            <h5 class="card-title mt-3">Instructeurs</h5>
+                            <h2 class="text-warning">{{ total_instructors }}</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <i class="bi bi-person-badge me-2"></i>
+                                Profil Administrateur
+                            </h5>
+                            <p class="card-text"><strong>Nom:</strong> {{ user.get_full_name|default:user.username }}</p>
+                            <p class="card-text"><strong>Email:</strong> {{ user.email }}</p>
+                            <p class="card-text">
+                                <strong>Email vérifié:</strong> 
+                                {% if user.email_verified %}
+                                    <span class="badge bg-success">Oui</span>
+                                {% else %}
+                                    <span class="badge bg-warning">Non</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6 mb-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <i class="bi bi-graph-up me-2"></i>
+                                Statistiques Système
+                            </h5>
+                            <p class="card-text">Système fonctionnel: <span class="badge bg-success">100%</span></p>
+                            <p class="card-text">Emails vérifiés: <span class="badge bg-info">85%</span></p>
+                            <p class="card-text">Activité récente: <span class="badge bg-primary">Élevée</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Fonctionnalités Administrateur
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">✅ Gestion complète des utilisateurs</li>
+                        <li class="list-group-item">✅ Modération des cours et contenus</li>
+                        <li class="list-group-item">✅ Gestion des rôles et permissions</li>
+                        <li class="list-group-item">✅ Accès aux analytics et statistiques</li>
+                        <li class="list-group-item">✅ Configuration du système</li>
+                        <li class="list-group-item">✅ Sauvegarde et maintenance</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="mt-4">
+                <a href="{% url 'home' %}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left me-2"></i>Retour à l'accueil
+                </a>
+                <a href="/admin/" class="btn btn-danger ms-2">
+                    <i class="bi bi-gear me-2"></i>Interface Admin Django
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
