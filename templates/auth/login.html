@@ -32,6 +32,9 @@
 
                         <form method="post" class="auth-form">
                             {% csrf_token %}
+                            {% if redirect_field_value %}
+                                <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
+                            {% endif %}
                             
                             <div class="form-group mb-4">
                                 <div class="form-floating">

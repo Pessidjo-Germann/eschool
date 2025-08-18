@@ -1,0 +1,516 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Modifier le Profil - eSchool{% endblock %}
+
+{% block extra_head %}
+<style>
+    .profile-avatar {
+        width: 100px;
+        height: 100px;
+        object-fit: cover;
+        border: 3px solid #dee2e6;
+    }
+    .upload-area {
+        border: 2px dashed #dee2e6;
+        border-radius: 10px;
+        padding: 2rem;
+        text-align: center;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    .upload-area:hover {
+        border-color: #0d6efd;
+        background-color: #f8f9ff;
+    }
+    .upload-area.dragover {
+        border-color: #0d6efd;
+        background-color: #e7f1ff;
+    }
+    .form-section {
+        background: #fff;
+        border-radius: 15px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    .section-title {
+        color: #495057;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #f8f9fa;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0 text-dark">Modifier mon profil</h1>
+                <a href="{% url 'users:profile' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-2"></i>Retour au profil
+                </a>
+            </div>
+
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <form method="post" enctype="multipart/form-data" id="profileForm">
+                {% csrf_token %}
+                
+                <div class="row">
+                    <!-- Profile Picture Section -->
+                    <div class="col-lg-4 mb-4">
+                        <div class="form-section">
+                            <h5 class="section-title">
+                                <i class="bi bi-camera me-2"></i>Photo de profil
+                            </h5>
+                            
+                            <div class="text-center">
+                                <!-- Current Profile Picture -->
+                                <div class="mb-3">
+                                    {% if user.profile_picture %}
+                                        <img src="{{ user.profile_picture.url }}" 
+                                             alt="Photo actuelle" 
+                                             class="rounded-circle profile-avatar"
+                                             id="currentAvatar">
+                                    {% else %}
+                                        <div class="bg-secondary rounded-circle profile-avatar mx-auto d-flex align-items-center justify-content-center" id="currentAvatar">
+                                            <i class="bi bi-person-fill text-white" style="font-size: 2rem;"></i>
+                                        </div>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Upload Area -->
+                                <div class="upload-area" onclick="document.getElementById('id_profile_picture').click()">
+                                    <i class="bi bi-cloud-upload fs-2 text-muted mb-2"></i>
+                                    <p class="mb-0">Cliquez pour choisir une image</p>
+                                    <small class="text-muted">ou glissez-déposez une image ici</small>
+                                </div>
+
+                                {{ user_form.profile_picture }}
+                                
+                                {% if user_form.profile_picture.errors %}
+                                    <div class="text-danger mt-2">
+                                        {% for error in user_form.profile_picture.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+
+                                <small class="text-muted mt-2 d-block">
+                                    Formats acceptés: JPG, PNG, GIF (max 5MB)
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Main Form -->
+                    <div class="col-lg-8">
+                        <!-- Basic Information -->
+                        <div class="form-section">
+                            <h5 class="section-title">
+                                <i class="bi bi-person me-2"></i>Informations personnelles
+                            </h5>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ user_form.first_name.id_for_label }}" class="form-label">Prénom</label>
+                                    {{ user_form.first_name }}
+                                    {% if user_form.first_name.errors %}
+                                        <div class="text-danger">
+                                            {% for error in user_form.first_name.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ user_form.last_name.id_for_label }}" class="form-label">Nom</label>
+                                    {{ user_form.last_name }}
+                                    {% if user_form.last_name.errors %}
+                                        <div class="text-danger">
+                                            {% for error in user_form.last_name.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ user_form.email.id_for_label }}" class="form-label">Adresse email</label>
+                                    {{ user_form.email }}
+                                    {% if user_form.email.errors %}
+                                        <div class="text-danger">
+                                            {% for error in user_form.email.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ user_form.phone_number.id_for_label }}" class="form-label">Téléphone</label>
+                                    {{ user_form.phone_number }}
+                                    {% if user_form.phone_number.errors %}
+                                        <div class="text-danger">
+                                            {% for error in user_form.phone_number.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="{{ user_form.date_of_birth.id_for_label }}" class="form-label">Date de naissance</label>
+                                {{ user_form.date_of_birth }}
+                                {% if user_form.date_of_birth.errors %}
+                                    <div class="text-danger">
+                                        {% for error in user_form.date_of_birth.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="{{ user_form.bio.id_for_label }}" class="form-label">Biographie</label>
+                                {{ user_form.bio }}
+                                {% if user_form.bio.errors %}
+                                    <div class="text-danger">
+                                        {% for error in user_form.bio.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                <small class="text-muted">Parlez-nous de vous (max 500 caractères)</small>
+                            </div>
+                        </div>
+
+                        <!-- Role-specific sections -->
+                        {% if profile_type == 'student' and profile_form %}
+                        <div class="form-section">
+                            <h5 class="section-title">
+                                <i class="bi bi-mortarboard me-2"></i>Informations étudiant
+                            </h5>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ profile_form.current_grade.id_for_label }}" class="form-label">Classe actuelle</label>
+                                    {{ profile_form.current_grade }}
+                                    {% if profile_form.current_grade.errors %}
+                                        <div class="text-danger">
+                                            {% for error in profile_form.current_grade.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ profile_form.academic_year.id_for_label }}" class="form-label">Année académique</label>
+                                    {{ profile_form.academic_year }}
+                                    {% if profile_form.academic_year.errors %}
+                                        <div class="text-danger">
+                                            {% for error in profile_form.academic_year.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ profile_form.parent_contact.id_for_label }}" class="form-label">Contact parent/tuteur</label>
+                                    {{ profile_form.parent_contact }}
+                                    {% if profile_form.parent_contact.errors %}
+                                        <div class="text-danger">
+                                            {% for error in profile_form.parent_contact.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ profile_form.emergency_contact.id_for_label }}" class="form-label">Contact d'urgence</label>
+                                    {{ profile_form.emergency_contact }}
+                                    {% if profile_form.emergency_contact.errors %}
+                                        <div class="text-danger">
+                                            {% for error in profile_form.emergency_contact.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="{{ profile_form.address.id_for_label }}" class="form-label">Adresse</label>
+                                {{ profile_form.address }}
+                                {% if profile_form.address.errors %}
+                                    <div class="text-danger">
+                                        {% for error in profile_form.address.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if profile_type == 'instructor' %}
+                        <div class="form-section">
+                            <h5 class="section-title">
+                                <i class="bi bi-person-badge me-2"></i>Informations enseignant
+                            </h5>
+                            
+                            {% if profile_form %}
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ profile_form.department.id_for_label }}" class="form-label">Département</label>
+                                    {{ profile_form.department }}
+                                    {% if profile_form.department.errors %}
+                                        <div class="text-danger">
+                                            {% for error in profile_form.department.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ profile_form.office_location.id_for_label }}" class="form-label">Bureau</label>
+                                    {{ profile_form.office_location }}
+                                    {% if profile_form.office_location.errors %}
+                                        <div class="text-danger">
+                                            {% for error in profile_form.office_location.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="{{ profile_form.office_hours.id_for_label }}" class="form-label">Heures de bureau</label>
+                                {{ profile_form.office_hours }}
+                                {% if profile_form.office_hours.errors %}
+                                    <div class="text-danger">
+                                        {% for error in profile_form.office_hours.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="{{ profile_form.research_interests.id_for_label }}" class="form-label">Intérêts de recherche</label>
+                                {{ profile_form.research_interests }}
+                                {% if profile_form.research_interests.errors %}
+                                    <div class="text-danger">
+                                        {% for error in profile_form.research_interests.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+
+                            {% if qualifications_form %}
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ qualifications_form.specialization.id_for_label }}" class="form-label">Spécialisation</label>
+                                    {{ qualifications_form.specialization }}
+                                    {% if qualifications_form.specialization.errors %}
+                                        <div class="text-danger">
+                                            {% for error in qualifications_form.specialization.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ qualifications_form.experience_years.id_for_label }}" class="form-label">Années d'expérience</label>
+                                    {{ qualifications_form.experience_years }}
+                                    {% if qualifications_form.experience_years.errors %}
+                                        <div class="text-danger">
+                                            {% for error in qualifications_form.experience_years.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="{{ qualifications_form.qualifications.id_for_label }}" class="form-label">Qualifications</label>
+                                {{ qualifications_form.qualifications }}
+                                {% if qualifications_form.qualifications.errors %}
+                                    <div class="text-danger">
+                                        {% for error in qualifications_form.qualifications.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+
+                        {% if profile_type == 'admin' and profile_form %}
+                        <div class="form-section">
+                            <h5 class="section-title">
+                                <i class="bi bi-shield-check me-2"></i>Informations administrateur
+                            </h5>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ profile_form.permission_level.id_for_label }}" class="form-label">Niveau de permissions</label>
+                                    {{ profile_form.permission_level }}
+                                    {% if profile_form.permission_level.errors %}
+                                        <div class="text-danger">
+                                            {% for error in profile_form.permission_level.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ profile_form.department.id_for_label }}" class="form-label">Département</label>
+                                    {{ profile_form.department }}
+                                    {% if profile_form.department.errors %}
+                                        <div class="text-danger">
+                                            {% for error in profile_form.department.errors %}
+                                                <small>{{ error }}</small>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="{{ profile_form.responsibilities.id_for_label }}" class="form-label">Responsabilités</label>
+                                {{ profile_form.responsibilities }}
+                                {% if profile_form.responsibilities.errors %}
+                                    <div class="text-danger">
+                                        {% for error in profile_form.responsibilities.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Action Buttons -->
+                        <div class="form-section">
+                            <div class="d-flex justify-content-between">
+                                <a href="{% url 'users:profile' %}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-x-circle me-2"></i>Annuler
+                                </a>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-check-circle me-2"></i>Enregistrer les modifications
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Add Bootstrap classes to form fields
+document.addEventListener('DOMContentLoaded', function() {
+    // Add form-control class to all inputs
+    const inputs = document.querySelectorAll('input[type="text"], input[type="email"], input[type="tel"], input[type="date"], input[type="number"], textarea, select');
+    inputs.forEach(input => {
+        input.classList.add('form-control');
+    });
+
+    // Hide file input
+    const fileInput = document.getElementById('id_profile_picture');
+    if (fileInput) {
+        fileInput.style.display = 'none';
+        
+        // Handle file selection
+        fileInput.addEventListener('change', function() {
+            const file = this.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const currentAvatar = document.getElementById('currentAvatar');
+                    if (currentAvatar.tagName === 'IMG') {
+                        currentAvatar.src = e.target.result;
+                    } else {
+                        // Replace div with img
+                        const newImg = document.createElement('img');
+                        newImg.src = e.target.result;
+                        newImg.alt = 'Nouvelle photo';
+                        newImg.className = 'rounded-circle profile-avatar';
+                        newImg.id = 'currentAvatar';
+                        currentAvatar.parentNode.replaceChild(newImg, currentAvatar);
+                    }
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    // Drag and drop functionality
+    const uploadArea = document.querySelector('.upload-area');
+    if (uploadArea) {
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight(e) {
+            uploadArea.classList.add('dragover');
+        }
+
+        function unhighlight(e) {
+            uploadArea.classList.remove('dragover');
+        }
+
+        uploadArea.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                const event = new Event('change', { bubbles: true });
+                fileInput.dispatchEvent(event);
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

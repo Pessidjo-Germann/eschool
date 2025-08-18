@@ -3,7 +3,7 @@ from .views import (
     HomeView, LoginView, SignupView, LogoutView,
     CustomPasswordResetView, CustomPasswordResetDoneView,
     CustomPasswordResetConfirmView, CustomPasswordResetCompleteView,
-    EmailVerificationView, student_dashboard, instructor_dashboard,
+    EmailVerificationView, dashboard_redirect, student_dashboard, instructor_dashboard,
     admin_dashboard, StudentDashboardView, user_profile_api
 )
 
@@ -21,6 +21,9 @@ urlpatterns = [
     path('password-reset/done/', CustomPasswordResetDoneView.as_view(), name='password_reset_done'),
     path('reset/<uidb64>/<token>/', CustomPasswordResetConfirmView.as_view(), name='password_reset_confirm'),
     path('reset/done/', CustomPasswordResetCompleteView.as_view(), name='password_reset_complete'),
+    
+    # Dashboard redirect
+    path('dashboard/', dashboard_redirect, name='dashboard'),
     
     # Role-based demo dashboards
     path('student-dashboard/', student_dashboard, name='student_dashboard'),

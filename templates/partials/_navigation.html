@@ -49,16 +49,20 @@
                 {% if user.is_authenticated %}
                     <div class="nav-item dropdown user-dropdown">
                         <a class="nav-link dropdown-toggle user-avatar" href="#" id="userMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                           <div class="avatar-circle">
-                               {{ user.username|first|upper }}
-                           </div>
-                           <span class="user-name">{{ user.username }}</span>
+                           {% if user.profile_picture %}
+                               <img src="{{ user.profile_picture.url }}" alt="Avatar" class="avatar-circle" style="width: 32px; height: 32px; object-fit: cover;">
+                           {% else %}
+                               <div class="avatar-circle">
+                                   {{ user.username|first|upper }}
+                               </div>
+                           {% endif %}
+                           <span class="user-name">{{ user.get_full_name|default:user.username }}</span>
                         </a>
                         <ul class="dropdown-menu modern-dropdown">
-                            <li><a class="dropdown-item" href="#">
+                            <li><a class="dropdown-item" href="{% url 'dashboard' %}">
                                 <i class="bi bi-speedometer2 me-2"></i>Tableau de bord
                             </a></li>
-                            <li><a class="dropdown-item" href="#">
+                            <li><a class="dropdown-item" href="{% url 'users:profile' %}">
                                 <i class="bi bi-person me-2"></i>Profil
                             </a></li>
                             {% if user.is_superuser or user.is_staff %}
