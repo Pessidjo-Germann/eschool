@@ -53,7 +53,7 @@
                                 </div>
                                 <h5>Créer un cours</h5>
                                 <p>Partagez vos connaissances avec la communauté</p>
-                                <a href="#" class="btn modern-btn-filled">Commencer</a>
+                                <a href="{% url 'instructor:course_create' %}" class="btn modern-btn-filled">Commencer</a>
                             </div>
                         </div>
                         <div class="col-md-4">
@@ -63,7 +63,7 @@
                                 </div>
                                 <h5>Mes créations</h5>
                                 <p>Gérez vos cours et suivez les inscriptions</p>
-                                <a href="#" class="btn modern-btn">Voir mes cours</a>
+                                <a href="{% url 'instructor:courses' %}" class="btn modern-btn">Voir mes cours</a>
                             </div>
                         </div>
                         <div class="col-md-4">
@@ -73,7 +73,7 @@
                                 </div>
                                 <h5>Analytiques</h5>
                                 <p>Suivez les performances de vos cours</p>
-                                <a href="#" class="btn modern-btn">Voir stats</a>
+                                <a href="{% url 'instructor:courses' %}" class="btn modern-btn">Voir stats</a>
                             </div>
                         </div>
                     {% else %}
@@ -84,7 +84,7 @@
                                 </div>
                                 <h5>Mes cours</h5>
                                 <p>Continuez là où vous vous êtes arrêté</p>
-                                <a href="#" class="btn modern-btn-filled">Continuer</a>
+                                <a href="{% url 'courses:my_courses' %}" class="btn modern-btn-filled">Continuer</a>
                             </div>
                         </div>
                         <div class="col-md-4">
@@ -94,7 +94,7 @@
                                 </div>
                                 <h5>Explorer</h5>
                                 <p>Découvrez de nouveaux cours passionnants</p>
-                                <a href="#" class="btn modern-btn">Explorer</a>
+                                <a href="{% url 'courses:courses_list' %}" class="btn modern-btn">Explorer</a>
                             </div>
                         </div>
                         <div class="col-md-4">
@@ -104,7 +104,7 @@
                                 </div>
                                 <h5>Mes certificats</h5>
                                 <p>Consultez vos accomplissements</p>
-                                <a href="#" class="btn modern-btn">Voir certificats</a>
+                                <a href="{% url 'users:profile' %}" class="btn modern-btn">Voir certificats</a>
                             </div>
                         </div>
                     {% endif %}
@@ -127,11 +127,11 @@
                             développez vos compétences avec notre plateforme moderne.
                         </p>
                         <div class="hero-buttons">
-                            <a href="#" class="btn modern-btn-filled btn-lg me-3">
+                            <a href="{% url 'courses:courses_list' %}" class="btn modern-btn-filled btn-lg me-3">
                                 <i class="bi bi-play-circle me-2"></i>
                                 Commencer maintenant
                             </a>
-                            <a href="#" class="btn modern-btn btn-lg">
+                            <a href="{% url 'courses:courses_list' %}" class="btn modern-btn btn-lg">
                                 <i class="bi bi-journal-bookmark me-2"></i>
                                 Explorer les cours
                             </a>
@@ -234,7 +234,7 @@
                     <div class="cta-content glass-effect">
                         <h2 class="cta-title">Prêt à commencer votre parcours d'apprentissage ?</h2>
                         <p class="cta-subtitle">Rejoignez des milliers d'étudiants qui font confiance à eSchool</p>
-                        <a href="#" class="btn modern-btn-filled btn-lg">
+                        <a href="{% url 'courses:courses_list' %}" class="btn modern-btn-filled btn-lg">
                             <i class="bi bi-rocket-takeoff me-2"></i>
                             Commencer gratuitement
                         </a>

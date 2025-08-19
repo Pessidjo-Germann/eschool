@@ -44,7 +44,7 @@
                 {% if user.is_authenticated %}
                     {% if user.is_instructor %}
                         <li class="nav-item">
-                            <a class="nav-link modern-link" href="#">
+                            <a class="nav-link modern-link" href="{% url 'instructor:courses' %}">
                                 <i class="bi bi-plus-circle me-1"></i>
                                 Mes créations
                             </a>
