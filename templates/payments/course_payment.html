@@ -1,0 +1,272 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Paiement - {{ course.title }} - {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.payment-container {
+    max-width: 800px;
+    margin: 2rem auto;
+}
+.course-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    overflow: hidden;
+    margin-bottom: 2rem;
+}
+.course-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem;
+}
+.course-info {
+    padding: 2rem;
+}
+.payment-form {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 2rem;
+}
+.price-display {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #28a745;
+}
+.secure-badge {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    display: inline-flex;
+    align-items: center;
+}
+.payment-methods {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 1rem;
+    margin: 1.5rem 0;
+}
+.payment-method {
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+    transition: all 0.3s;
+    cursor: pointer;
+}
+.payment-method:hover {
+    border-color: #007bff;
+    transform: translateY(-2px);
+}
+.payment-method.selected {
+    border-color: #007bff;
+    background: #f0f8ff;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="payment-container">
+        <!-- En-tête de navigation -->
+        <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">
+                    <a href="{% url 'courses:courses_list' %}">Cours</a>
+                </li>
+                <li class="breadcrumb-item">
+                    <a href="{% url 'courses:course_detail' course.id %}">{{ course.title }}</a>
+                </li>
+                <li class="breadcrumb-item active" aria-current="page">Paiement</li>
+            </ol>
+        </nav>
+
+        <!-- Informations du cours -->
+        <div class="course-card">
+            <div class="course-header">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h1 class="h3 mb-2">{{ course.title }}</h1>
+                        <p class="mb-0 opacity-75">{{ course.description|truncatewords:20 }}</p>
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        <div class="price-display">{{ course.price|floatformat:0 }} XAF</div>
+                        <div class="small opacity-75">Prix d'inscription</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="course-info">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><i class="bi bi-person-fill-gear me-2"></i>Instructeur</h6>
+                        <p>{{ course.instructor.get_full_name|default:course.instructor.username }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="bi bi-clock me-2"></i>Durée</h6>
+                        <p>{{ course.estimated_duration }} heures</p>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><i class="bi bi-diagram-3 me-2"></i>Niveau</h6>
+                        <p>{{ course.get_level_display }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="bi bi-translate me-2"></i>Langue</h6>
+                        <p>{{ course.language }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Formulaire de paiement -->
+        <div class="payment-form">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h4><i class="bi bi-credit-card me-2"></i>Finaliser le paiement</h4>
+                <div class="secure-badge">
+                    <i class="bi bi-shield-check me-2"></i>
+                    Paiement sécurisé
+                </div>
+            </div>
+
+            {% if payment_config %}
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>Environnement:</strong> 
+                {% if payment_config.is_sandbox %}
+                    Mode Test (Sandbox)
+                {% else %}
+                    Mode Production
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Méthodes de paiement disponibles -->
+            <h6 class="mb-3">Choisir une méthode de paiement</h6>
+            <div class="payment-methods">
+                <div class="payment-method" data-method="mtn_momo">
+                    <i class="bi bi-phone" style="font-size: 2rem; color: #FFD700;"></i>
+                    <div class="mt-2 fw-bold">MTN Money</div>
+                </div>
+                <div class="payment-method" data-method="orange_money">
+                    <i class="bi bi-phone" style="font-size: 2rem; color: #FF6600;"></i>
+                    <div class="mt-2 fw-bold">Orange Money</div>
+                </div>
+                <div class="payment-method" data-method="express_union">
+                    <i class="bi bi-bank" style="font-size: 2rem; color: #0066CC;"></i>
+                    <div class="mt-2 fw-bold">Express Union</div>
+                </div>
+                <div class="payment-method" data-method="card">
+                    <i class="bi bi-credit-card" style="font-size: 2rem; color: #6c757d;"></i>
+                    <div class="mt-2 fw-bold">Carte bancaire</div>
+                </div>
+            </div>
+
+            <!-- Résumé de la commande -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0">Résumé de la commande</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Prix du cours:</span>
+                        <strong>{{ course.price|floatformat:0 }} XAF</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Frais de traitement:</span>
+                        <span class="text-muted">Inclus</span>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <strong>Total à payer:</strong>
+                        <strong class="text-success">{{ course.price|floatformat:0 }} XAF</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Formulaire de soumission -->
+            <form method="post" id="payment-form" class="mt-4">
+                {% csrf_token %}
+                <input type="hidden" name="payment_method" id="selected-method" value="">
+                
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary btn-lg" id="pay-button" disabled>
+                        <i class="bi bi-lock-fill me-2"></i>
+                        Procéder au paiement de {{ course.price|floatformat:0 }} XAF
+                    </button>
+                    
+                    <a href="{% url 'courses:course_detail' course.id %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-2"></i>
+                        Retour au cours
+                    </a>
+                </div>
+            </form>
+
+            <!-- Informations supplémentaires -->
+            <div class="mt-4">
+                <div class="row text-center">
+                    <div class="col-4">
+                        <i class="bi bi-shield-check text-success" style="font-size: 2rem;"></i>
+                        <div class="small mt-2">Paiement sécurisé</div>
+                    </div>
+                    <div class="col-4">
+                        <i class="bi bi-award text-warning" style="font-size: 2rem;"></i>
+                        <div class="small mt-2">Certificat inclus</div>
+                    </div>
+                    <div class="col-4">
+                        <i class="bi bi-infinity text-info" style="font-size: 2rem;"></i>
+                        <div class="small mt-2">Accès à vie</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const paymentMethods = document.querySelectorAll('.payment-method');
+    const selectedMethodInput = document.getElementById('selected-method');
+    const payButton = document.getElementById('pay-button');
+    
+    paymentMethods.forEach(method => {
+        method.addEventListener('click', function() {
+            // Retirer la sélection précédente
+            paymentMethods.forEach(m => m.classList.remove('selected'));
+            
+            // Sélectionner la nouvelle méthode
+            this.classList.add('selected');
+            
+            // Mettre à jour le champ caché
+            const methodValue = this.dataset.method;
+            selectedMethodInput.value = methodValue;
+            
+            // Activer le bouton de paiement
+            payButton.disabled = false;
+        });
+    });
+    
+    // Gestion de soumission du formulaire
+    document.getElementById('payment-form').addEventListener('submit', function(e) {
+        if (!selectedMethodInput.value) {
+            e.preventDefault();
+            alert('Veuillez choisir une méthode de paiement');
+            return false;
+        }
+        
+        // Désactiver le bouton pour éviter les doubles soumissions
+        payButton.disabled = true;
+        payButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Traitement en cours...';
+    });
+});
+</script>
+{% endblock %}

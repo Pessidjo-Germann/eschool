@@ -1,0 +1,273 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Mes Transactions - {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.transactions-container {
+    max-width: 1000px;
+    margin: 2rem auto;
+}
+.transaction-card {
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+    margin-bottom: 1rem;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.transaction-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+.transaction-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid #f8f9fa;
+}
+.transaction-body {
+    padding: 1.5rem;
+}
+.status-badge {
+    font-size: 0.9rem;
+    padding: 0.4rem 0.8rem;
+    border-radius: 15px;
+    font-weight: 500;
+}
+.amount-display {
+    font-size: 1.3rem;
+    font-weight: bold;
+}
+.filters-card {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #6c757d;
+}
+.empty-state i {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="transactions-container">
+        <!-- En-tête -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="h3 mb-2">Mes Transactions</h1>
+                <p class="text-muted mb-0">Historique de vos paiements et transactions</p>
+            </div>
+            <a href="{% url 'courses:courses_list' %}" class="btn btn-outline-primary">
+                <i class="bi bi-plus-circle me-2"></i>
+                Acheter un cours
+            </a>
+        </div>
+
+        <!-- Filtres et statistiques -->
+        <div class="filters-card">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h6 class="mb-3">Filtrer les transactions</h6>
+                    <form method="get" id="filter-form">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <select name="status" class="form-select" onchange="document.getElementById('filter-form').submit()">
+                                    <option value="">Tous les statuts</option>
+                                    <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>Terminé</option>
+                                    <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>En attente</option>
+                                    <option value="failed" {% if request.GET.status == 'failed' %}selected{% endif %}>Échoué</option>
+                                    <option value="cancelled" {% if request.GET.status == 'cancelled' %}selected{% endif %}>Annulé</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <select name="currency" class="form-select" onchange="document.getElementById('filter-form').submit()">
+                                    <option value="">Toutes les devises</option>
+                                    <option value="XAF" {% if request.GET.currency == 'XAF' %}selected{% endif %}>XAF</option>
+                                    <option value="USD" {% if request.GET.currency == 'USD' %}selected{% endif %}>USD</option>
+                                    <option value="EUR" {% if request.GET.currency == 'EUR' %}selected{% endif %}>EUR</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <a href="{% url 'payments:user_transactions' %}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-arrow-clockwise me-1"></i>
+                                    Réinitialiser
+                                </a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="col-md-4 text-md-end">
+                    <div class="text-muted mb-1">Total des transactions</div>
+                    <div class="h4 mb-0">{{ transactions.count }}</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Liste des transactions -->
+        {% if transactions %}
+            {% for transaction in transactions %}
+            <div class="transaction-card">
+                <div class="transaction-header">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    {% if transaction.is_successful %}
+                                        <i class="bi bi-check-circle-fill text-success" style="font-size: 1.5rem;"></i>
+                                    {% elif transaction.is_failed %}
+                                        <i class="bi bi-x-circle-fill text-danger" style="font-size: 1.5rem;"></i>
+                                    {% elif transaction.status == 'cancelled' %}
+                                        <i class="bi bi-dash-circle-fill text-warning" style="font-size: 1.5rem;"></i>
+                                    {% else %}
+                                        <i class="bi bi-clock-fill text-info" style="font-size: 1.5rem;"></i>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <h6 class="mb-1">{{ transaction.description }}</h6>
+                                    <div class="text-muted small">{{ transaction.reference }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3 text-md-center">
+                            <span class="status-badge 
+                                {% if transaction.is_successful %}bg-success
+                                {% elif transaction.is_failed %}bg-danger
+                                {% elif transaction.status == 'cancelled' %}bg-warning
+                                {% else %}bg-info{% endif %}">
+                                {{ transaction.get_status_display }}
+                            </span>
+                        </div>
+                        <div class="col-md-3 text-md-end">
+                            <div class="amount-display 
+                                {% if transaction.is_successful %}text-success
+                                {% elif transaction.is_failed %}text-danger
+                                {% else %}text-muted{% endif %}">
+                                {{ transaction.amount|floatformat:0 }} {{ transaction.currency }}
+                            </div>
+                            <div class="text-muted small">
+                                {{ transaction.created_at|date:"d/m/Y H:i" }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="transaction-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="row">
+                                {% if transaction.payment_method %}
+                                <div class="col-md-6">
+                                    <small class="text-muted">Méthode de paiement</small>
+                                    <div>{{ transaction.get_payment_method_display }}</div>
+                                </div>
+                                {% endif %}
+                                
+                                {% if transaction.paid_at %}
+                                <div class="col-md-6">
+                                    <small class="text-muted">Payé le</small>
+                                    <div>{{ transaction.paid_at|date:"d/m/Y à H:i" }}</div>
+                                </div>
+                                {% endif %}
+                            </div>
+                            
+                            {% if transaction.error_message %}
+                            <div class="mt-2">
+                                <small class="text-muted">Erreur</small>
+                                <div class="text-danger">{{ transaction.error_message }}</div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-4 text-md-end">
+                            <div class="btn-group">
+                                <a href="{% url 'payments:transaction_detail' transaction.id %}" 
+                                   class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-eye me-1"></i>
+                                    Détails
+                                </a>
+                                
+                                {% if not transaction.is_successful and transaction.content_type.model == 'course' %}
+                                <a href="{% url 'payments:course_payment' transaction.object_id %}" 
+                                   class="btn btn-primary btn-sm">
+                                    <i class="bi bi-arrow-clockwise me-1"></i>
+                                    Réessayer
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+            
+            <!-- Pagination -->
+            {% comment %}
+            {% if is_paginated %}
+            <nav aria-label="Navigation des transactions" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Précédent</a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+                    
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}">Suivant</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            {% endcomment %}
+            
+        {% else %}
+            <!-- État vide -->
+            <div class="empty-state">
+                <i class="bi bi-receipt text-muted"></i>
+                <h4>Aucune transaction trouvée</h4>
+                <p class="mb-4">Vous n'avez pas encore effectué de transactions.</p>
+                <a href="{% url 'courses:courses_list' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle me-2"></i>
+                    Découvrir nos cours
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Actualisation automatique pour les transactions en attente
+    const pendingTransactions = document.querySelectorAll('[data-status="pending"], [data-status="processing"]');
+    
+    if (pendingTransactions.length > 0) {
+        // Actualiser la page toutes les 30 secondes s'il y a des transactions en attente
+        setTimeout(() => {
+            window.location.reload();
+        }, 30000);
+    }
+});
+</script>
+{% endblock %}

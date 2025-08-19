@@ -298,7 +298,7 @@
                     {% endif %}
                 {% else %}
                     <div class="text-center mb-4">
-                        <h3>${{ course.price }}</h3>
+                        <h3>{{ course.price|floatformat:0 }} XAF</h3>
                         <small class="text-muted">Accès à vie</small>
                     </div>
                     {% if user.is_authenticated %}
@@ -307,12 +307,9 @@
                                 <i class="bi bi-check-circle"></i> Cours acheté
                             </a>
                         {% else %}
-                            <form method="post" action="{% url 'courses:enroll_course' course.slug %}" class="enroll-form">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-primary btn-lg w-100 mb-3">
-                                    <i class="bi bi-cart-plus"></i> Acheter maintenant
-                                </button>
-                            </form>
+                            <a href="{% url 'payments:course_payment' course.id %}" class="btn btn-primary btn-lg w-100 mb-3">
+                                <i class="bi bi-credit-card me-2"></i> Acheter maintenant
+                            </a>
                         {% endif %}
                     {% else %}
                         <a href="{% url 'login' %}" class="btn btn-primary btn-lg w-100 mb-3">

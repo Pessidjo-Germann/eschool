@@ -1,0 +1,278 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}
+{% if is_success %}
+    Paiement réussi
+{% else %}
+    Paiement échoué
+{% endif %}
+- {{ block.super }}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.result-container {
+    max-width: 600px;
+    margin: 3rem auto;
+}
+.result-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    overflow: hidden;
+    text-align: center;
+}
+.result-header {
+    padding: 3rem 2rem 2rem;
+}
+.result-header.success {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+}
+.result-header.error {
+    background: linear-gradient(135deg, #dc3545, #e74c3c);
+    color: white;
+}
+.result-header.warning {
+    background: linear-gradient(135deg, #ffc107, #fd7e14);
+    color: white;
+}
+.result-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+.result-body {
+    padding: 2rem;
+}
+.transaction-details {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+    text-align: left;
+}
+.status-badge {
+    font-size: 1.1rem;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    display: inline-block;
+    margin: 1rem 0;
+}
+.action-buttons {
+    display: grid;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="result-container">
+        <div class="result-card">
+            <div class="result-header {% if is_success %}success{% elif transaction.status == 'cancelled' %}warning{% else %}error{% endif %}">
+                <div class="result-icon">
+                    {% if is_success %}
+                        <i class="bi bi-check-circle-fill"></i>
+                    {% elif transaction.status == 'cancelled' %}
+                        <i class="bi bi-x-circle-fill"></i>
+                    {% else %}
+                        <i class="bi bi-exclamation-triangle-fill"></i>
+                    {% endif %}
+                </div>
+                
+                <h1 class="h3 mb-3">
+                    {% if is_success %}
+                        Paiement réussi !
+                    {% elif transaction.status == 'cancelled' %}
+                        Paiement annulé
+                    {% else %}
+                        Paiement échoué
+                    {% endif %}
+                </h1>
+                
+                <p class="mb-0">
+                    {% if is_success %}
+                        Votre paiement a été traité avec succès
+                    {% elif transaction.status == 'cancelled' %}
+                        Vous avez annulé le processus de paiement
+                    {% else %}
+                        Le paiement n'a pas pu être effectué
+                    {% endif %}
+                </p>
+            </div>
+            
+            <div class="result-body">
+                <!-- Badge de statut -->
+                <div class="status-badge 
+                    {% if is_success %}bg-success{% elif transaction.status == 'cancelled' %}bg-warning{% else %}bg-danger{% endif %}">
+                    {{ transaction.get_status_display }}
+                </div>
+                
+                <!-- Détails de la transaction -->
+                <div class="transaction-details">
+                    <h6 class="mb-3">
+                        <i class="bi bi-receipt me-2"></i>
+                        Détails de la transaction
+                    </h6>
+                    
+                    <div class="row mb-2">
+                        <div class="col-5"><strong>Référence:</strong></div>
+                        <div class="col-7">{{ transaction.reference }}</div>
+                    </div>
+                    
+                    <div class="row mb-2">
+                        <div class="col-5"><strong>Montant:</strong></div>
+                        <div class="col-7">{{ transaction.amount|floatformat:0 }} {{ transaction.currency }}</div>
+                    </div>
+                    
+                    <div class="row mb-2">
+                        <div class="col-5"><strong>Description:</strong></div>
+                        <div class="col-7">{{ transaction.description }}</div>
+                    </div>
+                    
+                    <div class="row mb-2">
+                        <div class="col-5"><strong>Date:</strong></div>
+                        <div class="col-7">{{ transaction.created_at|date:"d/m/Y H:i" }}</div>
+                    </div>
+                    
+                    {% if transaction.payment_method %}
+                    <div class="row mb-2">
+                        <div class="col-5"><strong>Méthode:</strong></div>
+                        <div class="col-7">{{ transaction.get_payment_method_display }}</div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if transaction.paid_at %}
+                    <div class="row mb-2">
+                        <div class="col-5"><strong>Payé le:</strong></div>
+                        <div class="col-7">{{ transaction.paid_at|date:"d/m/Y H:i" }}</div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if transaction.error_message %}
+                    <div class="row mb-2">
+                        <div class="col-5"><strong>Erreur:</strong></div>
+                        <div class="col-7 text-danger">{{ transaction.error_message }}</div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Messages spécifiques -->
+                {% if is_success %}
+                <div class="alert alert-success">
+                    <i class="bi bi-check-circle me-2"></i>
+                    {% if transaction.content_type.model == 'course' %}
+                        Félicitations ! Vous êtes maintenant inscrit au cours. Vous pouvez commencer votre apprentissage immédiatement.
+                    {% else %}
+                        Votre achat a été confirmé. Vous devriez recevoir un email de confirmation sous peu.
+                    {% endif %}
+                </div>
+                {% elif transaction.status == 'cancelled' %}
+                <div class="alert alert-warning">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Vous pouvez reprendre le processus de paiement à tout moment en retournant sur la page du cours.
+                </div>
+                {% else %}
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    {% if transaction.error_message %}
+                        {{ transaction.error_message }}
+                    {% else %}
+                        Une erreur s'est produite lors du traitement de votre paiement. Veuillez réessayer ou contacter le support.
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                <!-- Boutons d'action -->
+                <div class="action-buttons">
+                    {% if is_success %}
+                        {% if transaction.content_type.model == 'course' %}
+                        <a href="{% url 'courses:course_detail' transaction.object_id %}" class="btn btn-primary">
+                            <i class="bi bi-play-circle me-2"></i>
+                            Commencer le cours
+                        </a>
+                        {% endif %}
+                        
+                        <a href="{% url 'payments:user_transactions' %}" class="btn btn-outline-primary">
+                            <i class="bi bi-list me-2"></i>
+                            Voir mes transactions
+                        </a>
+                    {% elif transaction.status == 'cancelled' %}
+                        {% if transaction.content_type.model == 'course' %}
+                        <a href="{% url 'payments:course_payment' transaction.object_id %}" class="btn btn-primary">
+                            <i class="bi bi-arrow-clockwise me-2"></i>
+                            Réessayer le paiement
+                        </a>
+                        {% endif %}
+                        
+                        <a href="{% url 'courses:courses_list' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-2"></i>
+                            Retour aux cours
+                        </a>
+                    {% else %}
+                        {% if transaction.content_type.model == 'course' %}
+                        <a href="{% url 'payments:course_payment' transaction.object_id %}" class="btn btn-primary">
+                            <i class="bi bi-arrow-clockwise me-2"></i>
+                            Réessayer le paiement
+                        </a>
+                        {% endif %}
+                        
+                        <a href="{% url 'payments:transaction_detail' transaction.id %}" class="btn btn-outline-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            Détails complets
+                        </a>
+                        
+                        <a href="{% url 'courses:courses_list' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-2"></i>
+                            Retour aux cours
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Informations d'aide -->
+        <div class="text-center mt-4">
+            <p class="text-muted">
+                Besoin d'aide ? 
+                <a href="#" class="text-decoration-none">Contactez notre support</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Vérification automatique du statut si la transaction est en cours
+{% if transaction.is_pending %}
+document.addEventListener('DOMContentLoaded', function() {
+    const transactionId = '{{ transaction.id }}';
+    
+    function checkTransactionStatus() {
+        fetch(`/payments/api/status/${transactionId}/`)
+            .then(response => response.json())
+            .then(data => {
+                if (!data.is_pending) {
+                    // La transaction n'est plus en attente, recharger la page
+                    window.location.reload();
+                }
+            })
+            .catch(error => {
+                console.error('Erreur lors de la vérification du statut:', error);
+            });
+    }
+    
+    // Vérifier le statut toutes les 5 secondes
+    const interval = setInterval(checkTransactionStatus, 5000);
+    
+    // Arrêter la vérification après 5 minutes
+    setTimeout(() => {
+        clearInterval(interval);
+    }, 300000);
+});
+{% endif %}
+</script>
+{% endblock %}

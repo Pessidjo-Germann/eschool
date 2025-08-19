@@ -5,7 +5,7 @@ from rest_framework.exceptions import ValidationError, PermissionDenied
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.db import transaction
-from django_filters.rest_framework import DjangoFilterBackend
+# from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 
 from .models import Quiz, Question, Choice, QuizAttempt, Answer
@@ -24,7 +24,7 @@ class QuizViewSet(viewsets.ModelViewSet):
     """ViewSet pour la gestion des quiz"""
     
     permission_classes = [permissions.IsAuthenticated]
-    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filter_backends = [SearchFilter, OrderingFilter]
     filterset_fields = ['quiz_type', 'difficulty', 'is_published', 'course']
     search_fields = ['title', 'description']
     ordering_fields = ['created_at', 'title', 'difficulty']
@@ -288,7 +288,7 @@ class QuizAttemptViewSet(viewsets.ReadOnlyModelViewSet):
     """ViewSet pour consulter les tentatives de quiz"""
     
     permission_classes = [permissions.IsAuthenticated]
-    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filter_backends = [OrderingFilter]
     filterset_fields = ['status', 'passed', 'quiz']
     ordering_fields = ['started_at', 'score']
     ordering = ['-started_at']

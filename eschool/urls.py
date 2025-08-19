@@ -24,11 +24,12 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('accounts/profile/', RedirectView.as_view(url='/users/profile/', permanent=False)),
     path('users/', include('users.urls')),
-    path('api/users/', include('users.api_urls')),
-    path('api/courses/', include('courses.api_urls')),
+    # path('api/users/', include('users.api_urls')),
+    # path('api/courses/', include('courses.api_urls')),
     path('quiz/', include('quiz.urls')),
     path('instructor/', include('courses.instructor_urls')),
     path('courses/', include('courses.urls')),
+    path('payments/', include('payments.urls')),
     path('', include('core.urls')),
 ]
 
