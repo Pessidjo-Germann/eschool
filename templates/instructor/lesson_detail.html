@@ -1,0 +1,529 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ lesson.title }} - {{ module.title }} - E-School{% endblock %}
+
+{% block extra_head %}
+<style>
+.lesson-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem 0;
+    margin-bottom: 2rem;
+}
+
+.content-section {
+    background: white;
+    border-radius: 15px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+}
+
+.breadcrumb-nav {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 10px;
+    margin-bottom: 1.5rem;
+    border-left: 4px solid #667eea;
+}
+
+.lesson-type-badge {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-bottom: 1rem;
+}
+
+.type-text { background: #e3f2fd; color: #1976d2; }
+.type-video { background: #ffebee; color: #d32f2f; }
+.type-audio { background: #fff8e1; color: #f57c00; }
+.type-document { background: #e8f5e8; color: #388e3c; }
+.type-external { background: #f3e5f5; color: #7b1fa2; }
+
+.status-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    margin-left: 0.5rem;
+}
+
+.status-published { background: #d4edda; color: #155724; }
+.status-draft { background: #f8d7da; color: #721c24; }
+
+.content-preview {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    border-left: 4px solid #667eea;
+}
+
+.resource-item {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    background: white;
+    border-radius: 10px;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease;
+}
+
+.resource-item:hover {
+    transform: translateY(-2px);
+}
+
+.resource-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+    font-size: 1.2rem;
+}
+
+.resource-pdf { background: #ffebee; color: #d32f2f; }
+.resource-image { background: #e8f5e8; color: #388e3c; }
+.resource-video { background: #fff8e1; color: #f57c00; }
+.resource-link { background: #e3f2fd; color: #1976d2; }
+
+.action-bar {
+    background: white;
+    padding: 1rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    margin-bottom: 2rem;
+}
+
+.media-preview {
+    max-width: 100%;
+    border-radius: 10px;
+    margin-bottom: 1rem;
+}
+
+.video-container {
+    position: relative;
+    width: 100%;
+    height: 0;
+    padding-bottom: 56.25%; /* 16:9 aspect ratio */
+    margin-bottom: 1rem;
+}
+
+.video-container iframe,
+.video-container video {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    border-radius: 10px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="lesson-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-2">{{ lesson.title }}</h1>
+                <p class="mb-2 lead">{{ lesson.description|default:"" }}</p>
+                <div class="mb-3">
+                    <span class="lesson-type-badge type-{{ lesson.lesson_type }}">
+                        <i class="bi bi-{% if lesson.lesson_type == 'video' %}play-circle{% elif lesson.lesson_type == 'audio' %}music-note{% elif lesson.lesson_type == 'document' %}file-earmark{% elif lesson.lesson_type == 'external' %}link-45deg{% else %}file-text{% endif %} me-2"></i>
+                        {{ lesson.get_lesson_type_display }}
+                    </span>
+                    {% if lesson.is_published %}
+                        <span class="status-badge status-published">Publiée</span>
+                    {% else %}
+                        <span class="status-badge status-draft">Brouillon</span>
+                    {% endif %}
+                    {% if lesson.is_preview %}
+                        <span class="status-badge" style="background: #cce5ff; color: #004085;">Aperçu</span>
+                    {% endif %}
+                    {% if lesson.is_mandatory %}
+                        <span class="status-badge" style="background: #ffe6cc; color: #cc4400;">Obligatoire</span>
+                    {% endif %}
+                </div>
+                <small class="opacity-75">
+                    {% if lesson.duration %}
+                        <i class="bi bi-clock me-1"></i>{{ lesson.duration }}
+                    {% endif %}
+                    <i class="bi bi-calendar ms-3 me-1"></i>Créée le {{ lesson.created_at|date:"d/m/Y" }}
+                </small>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <a href="{% url 'instructor:course_detail' course.pk %}" class="btn btn-light">
+                    <i class="bi bi-arrow-left me-2"></i>
+                    Retour au cours
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Navigation breadcrumb -->
+    <div class="breadcrumb-nav">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb mb-0">
+                <li class="breadcrumb-item">
+                    <a href="{% url 'instructor:course_detail' course.pk %}" class="text-decoration-none">
+                        {{ course.title }}
+                    </a>
+                </li>
+                <li class="breadcrumb-item">
+                    <span>Module {{ module.order }}: {{ module.title }}</span>
+                </li>
+                <li class="breadcrumb-item active" aria-current="page">
+                    Leçon {{ lesson.order }}: {{ lesson.title }}
+                </li>
+            </ol>
+        </nav>
+    </div>
+
+    <!-- Barre d'actions -->
+    <div class="action-bar">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="btn-group" role="group">
+                    <a href="{% url 'instructor:lesson_edit' course.pk module.pk lesson.pk %}" class="btn btn-primary">
+                        <i class="bi bi-pencil me-2"></i>Modifier la leçon
+                    </a>
+                    <a href="{% url 'instructor:lesson_create' course.pk module.pk %}" class="btn btn-outline-primary">
+                        <i class="bi bi-plus me-2"></i>Nouvelle leçon
+                    </a>
+                    <a href="{% url 'instructor:module_create' course.pk %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-collection me-2"></i>Nouveau module
+                    </a>
+                </div>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <div class="btn-group">
+                    {% if not lesson.is_published %}
+                        <form method="post" action="{% url 'instructor:lesson_publish' course.pk module.pk lesson.pk %}" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-success" 
+                                    onclick="return confirm('Publier cette leçon ?')">
+                                <i class="bi bi-check-circle me-2"></i>Publier
+                            </button>
+                        </form>
+                    {% else %}
+                        <form method="post" action="{% url 'instructor:lesson_unpublish' course.pk module.pk lesson.pk %}" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-warning" 
+                                    onclick="return confirm('Dépublier cette leçon ?')">
+                                <i class="bi bi-x-circle me-2"></i>Dépublier
+                            </button>
+                        </form>
+                    {% endif %}
+                    
+                    <form method="post" action="{% url 'instructor:lesson_delete' course.pk module.pk lesson.pk %}" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-danger" 
+                                onclick="return confirm('Supprimer définitivement cette leçon ? Cette action est irréversible.')">
+                            <i class="bi bi-trash me-2"></i>Supprimer
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Contenu principal -->
+        <div class="col-lg-8">
+            <!-- Contenu de la leçon -->
+            <div class="content-section">
+                <h4 class="mb-4">
+                    <i class="bi bi-{% if lesson.lesson_type == 'video' %}play-circle{% elif lesson.lesson_type == 'audio' %}music-note{% elif lesson.lesson_type == 'document' %}file-earmark{% elif lesson.lesson_type == 'external' %}link-45deg{% else %}file-text{% endif %} me-2"></i>
+                    Contenu de la leçon
+                </h4>
+
+                {% if lesson.lesson_type == 'text' and lesson.content %}
+                    <div class="content-preview">
+                        {{ lesson.content|linebreaksbr }}
+                    </div>
+                
+                {% elif lesson.lesson_type == 'video' %}
+                    {% if lesson.video_url %}
+                        <div class="video-container">
+                            {% if 'youtube.com' in lesson.video_url or 'youtu.be' in lesson.video_url %}
+                                {% with video_id=lesson.video_url|cut:'https://www.youtube.com/watch?v='|cut:'https://youtu.be/' %}
+                                    <iframe src="https://www.youtube.com/embed/{{ video_id }}" 
+                                            frameborder="0" allowfullscreen></iframe>
+                                {% endwith %}
+                            {% elif 'vimeo.com' in lesson.video_url %}
+                                <iframe src="{{ lesson.video_url|vimeo_embed }}" 
+                                        frameborder="0" allowfullscreen></iframe>
+                            {% else %}
+                                <div class="alert alert-info">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    <strong>Vidéo externe:</strong> 
+                                    <a href="{{ lesson.video_url }}" target="_blank" class="alert-link">
+                                        {{ lesson.video_url }}
+                                    </a>
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% elif lesson.video_file %}
+                        <video controls class="media-preview">
+                            <source src="{{ lesson.video_file.url }}" type="video/mp4">
+                            Votre navigateur ne supporte pas la lecture vidéo.
+                        </video>
+                    {% else %}
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            Aucun contenu vidéo configuré pour cette leçon.
+                        </div>
+                    {% endif %}
+                
+                {% elif lesson.lesson_type == 'audio' and lesson.audio_file %}
+                    <audio controls class="w-100 mb-3">
+                        <source src="{{ lesson.audio_file.url }}" type="audio/mpeg">
+                        Votre navigateur ne supporte pas la lecture audio.
+                    </audio>
+                
+                {% elif lesson.lesson_type == 'document' and lesson.document_file %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-file-earmark-pdf me-2"></i>
+                        <strong>Document:</strong> 
+                        <a href="{{ lesson.document_file.url }}" target="_blank" class="alert-link">
+                            {{ lesson.document_file.name|slice:"21:" }}
+                        </a>
+                        <span class="ms-2">
+                            <a href="{{ lesson.document_file.url }}" download class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-download"></i> Télécharger
+                            </a>
+                        </span>
+                    </div>
+                
+                {% elif lesson.lesson_type == 'external' and lesson.external_url %}
+                    <div class="alert alert-info">
+                        <i class="bi bi-link-45deg me-2"></i>
+                        <strong>Ressource externe:</strong> 
+                        <a href="{{ lesson.external_url }}" target="_blank" class="alert-link">
+                            {{ lesson.external_url }}
+                        </a>
+                    </div>
+                
+                {% else %}
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        Aucun contenu configuré pour cette leçon. 
+                        <a href="{% url 'instructor:lesson_edit' course.pk module.pk lesson.pk %}" class="alert-link">
+                            Cliquez ici pour ajouter du contenu.
+                        </a>
+                    </div>
+                {% endif %}
+
+                {% if lesson.content and lesson.lesson_type != 'text' %}
+                    <hr>
+                    <h5>Description détaillée</h5>
+                    <div class="text-muted">
+                        {{ lesson.content|linebreaksbr }}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Ressources -->
+            {% if resources %}
+            <div class="content-section">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4>
+                        <i class="bi bi-paperclip me-2"></i>
+                        Ressources ({{ resources.count }})
+                    </h4>
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="addResource()">
+                        <i class="bi bi-plus me-2"></i>Ajouter une ressource
+                    </button>
+                </div>
+
+                {% for resource in resources %}
+                <div class="resource-item">
+                    <div class="resource-icon resource-{{ resource.resource_type }}">
+                        <i class="bi bi-{% if resource.resource_type == 'pdf' %}file-earmark-pdf{% elif resource.resource_type == 'image' %}image{% elif resource.resource_type == 'video' %}play-circle{% else %}link{% endif %}"></i>
+                    </div>
+                    
+                    <div class="flex-grow-1">
+                        <h6 class="mb-1">{{ resource.title }}</h6>
+                        {% if resource.description %}
+                            <p class="text-muted mb-1">{{ resource.description|truncatewords:20 }}</p>
+                        {% endif %}
+                        <small class="text-muted">
+                            <i class="bi bi-calendar me-1"></i>{{ resource.created_at|date:"d/m/Y" }}
+                            {% if resource.is_downloadable %}
+                                <i class="bi bi-download ms-3 me-1"></i>Téléchargeable
+                            {% endif %}
+                        </small>
+                    </div>
+                    
+                    <div class="btn-group btn-group-sm">
+                        {% if resource.file %}
+                            <a href="{{ resource.file.url }}" target="_blank" class="btn btn-outline-primary" title="Voir">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            {% if resource.is_downloadable %}
+                                <a href="{{ resource.file.url }}" download class="btn btn-outline-success" title="Télécharger">
+                                    <i class="bi bi-download"></i>
+                                </a>
+                            {% endif %}
+                        {% elif resource.url %}
+                            <a href="{{ resource.url }}" target="_blank" class="btn btn-outline-primary" title="Ouvrir le lien">
+                                <i class="bi bi-box-arrow-up-right"></i>
+                            </a>
+                        {% endif %}
+                        <button type="button" class="btn btn-outline-secondary" title="Modifier"
+                                onclick="editResource({{ resource.id }})">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button type="button" class="btn btn-outline-danger" title="Supprimer"
+                                onclick="deleteResource({{ resource.id }})">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Informations -->
+            <div class="content-section">
+                <h5 class="mb-3">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Détails de la leçon
+                </h5>
+                
+                <div class="mb-3">
+                    <strong>Type:</strong> {{ lesson.get_lesson_type_display }}
+                </div>
+                
+                <div class="mb-3">
+                    <strong>Position:</strong> Leçon {{ lesson.order }} du module {{ module.order }}
+                </div>
+                
+                {% if lesson.duration %}
+                <div class="mb-3">
+                    <strong>Durée:</strong> {{ lesson.duration }}
+                </div>
+                {% endif %}
+                
+                <div class="mb-3">
+                    <strong>Statut:</strong>
+                    {% if lesson.is_published %}
+                        <span class="text-success">Publiée</span>
+                    {% else %}
+                        <span class="text-warning">Brouillon</span>
+                    {% endif %}
+                </div>
+                
+                <div class="mb-3">
+                    <strong>Options:</strong>
+                    <ul class="list-unstyled mb-0">
+                        {% if lesson.is_preview %}
+                            <li><i class="bi bi-eye text-info me-2"></i>Aperçu gratuit</li>
+                        {% endif %}
+                        {% if lesson.is_mandatory %}
+                            <li><i class="bi bi-exclamation-circle text-warning me-2"></i>Obligatoire</li>
+                        {% endif %}
+                        {% if not lesson.is_preview and not lesson.is_mandatory %}
+                            <li class="text-muted">Aucune option spéciale</li>
+                        {% endif %}
+                    </ul>
+                </div>
+                
+                <hr>
+                <small class="text-muted">
+                    Créée le {{ lesson.created_at|date:"d/m/Y à H:i" }}<br>
+                    Modifiée le {{ lesson.updated_at|date:"d/m/Y à H:i" }}
+                </small>
+            </div>
+
+            <!-- Notes privées -->
+            {% if lesson.notes %}
+            <div class="content-section">
+                <h5 class="mb-3">
+                    <i class="bi bi-sticky me-2"></i>
+                    Notes privées
+                </h5>
+                <div class="text-muted">
+                    {{ lesson.notes|linebreaksbr }}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Navigation rapide -->
+            <div class="content-section">
+                <h5 class="mb-3">
+                    <i class="bi bi-list-ul me-2"></i>
+                    Navigation rapide
+                </h5>
+                
+                {% with previous_lesson=lesson.get_previous_lesson next_lesson=lesson.get_next_lesson %}
+                    {% if previous_lesson %}
+                        <a href="{% url 'instructor:lesson_detail' course.pk module.pk previous_lesson.pk %}" 
+                           class="btn btn-outline-primary btn-sm w-100 mb-2">
+                            <i class="bi bi-arrow-left me-2"></i>Leçon précédente
+                        </a>
+                    {% endif %}
+                    
+                    {% if next_lesson %}
+                        <a href="{% url 'instructor:lesson_detail' course.pk module.pk next_lesson.pk %}" 
+                           class="btn btn-outline-primary btn-sm w-100 mb-2">
+                            Leçon suivante<i class="bi bi-arrow-right ms-2"></i>
+                        </a>
+                    {% endif %}
+                    
+                    {% if not previous_lesson and not next_lesson %}
+                        <p class="text-muted small">C'est la seule leçon de ce module</p>
+                    {% endif %}
+                {% endwith %}
+                
+                <a href="{% url 'instructor:lesson_create' course.pk module.pk %}" 
+                   class="btn btn-primary btn-sm w-100">
+                    <i class="bi bi-plus me-2"></i>Nouvelle leçon
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function addResource() {
+    alert('Fonctionnalité d\'ajout de ressources à implémenter');
+}
+
+function editResource(resourceId) {
+    alert('Modification de la ressource ' + resourceId + ' à implémenter');
+}
+
+function deleteResource(resourceId) {
+    if (confirm('Supprimer cette ressource ?')) {
+        alert('Suppression de la ressource ' + resourceId + ' à implémenter');
+    }
+}
+
+// Auto-play prevention for videos
+document.addEventListener('DOMContentLoaded', function() {
+    const videos = document.querySelectorAll('video');
+    videos.forEach(video => {
+        video.addEventListener('loadstart', function() {
+            this.volume = 0.7; // Volume par défaut
+        });
+    });
+});
+</script>
+{% endblock %}

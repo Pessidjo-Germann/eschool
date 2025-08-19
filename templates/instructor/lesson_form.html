@@ -1,0 +1,552 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }} - E-School{% endblock %}
+
+{% block extra_head %}
+<style>
+.form-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem 0;
+    margin-bottom: 2rem;
+}
+
+.form-section {
+    background: white;
+    border-radius: 15px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+}
+
+.breadcrumb-context {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 10px;
+    margin-bottom: 1.5rem;
+    border-left: 4px solid #667eea;
+}
+
+.lesson-type-selector {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.lesson-type-option {
+    border: 2px solid #dee2e6;
+    border-radius: 10px;
+    padding: 1rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.lesson-type-option:hover {
+    border-color: #667eea;
+    background: #f8f9fa;
+}
+
+.lesson-type-option.active {
+    border-color: #667eea;
+    background: #e7f1ff;
+}
+
+.lesson-type-option i {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.content-section {
+    display: none;
+}
+
+.content-section.active {
+    display: block;
+}
+
+.btn-submit {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    padding: 1rem 2rem;
+    border-radius: 10px;
+    color: white;
+    font-weight: 500;
+    transition: transform 0.2s ease;
+}
+
+.btn-submit:hover {
+    transform: translateY(-2px);
+    color: white;
+}
+
+.file-upload-area {
+    border: 2px dashed #dee2e6;
+    border-radius: 10px;
+    padding: 2rem;
+    text-align: center;
+    transition: border-color 0.2s ease;
+}
+
+.file-upload-area:hover {
+    border-color: #667eea;
+}
+
+.file-upload-area.dragover {
+    border-color: #667eea;
+    background: #f8f9fa;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="form-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-2">
+                    <i class="bi bi-{% if lesson %}pencil{% else %}plus-circle{% endif %} me-3"></i>
+                    {{ page_title }}
+                </h1>
+                <p class="mb-0 lead">{% if lesson %}Modifiez{% else %}Créez{% endif %} une leçon</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <a href="{% url 'instructor:course_detail' course.pk %}" class="btn btn-light">
+                    <i class="bi bi-arrow-left me-2"></i>
+                    Retour au cours
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Contexte (cours > module) -->
+    <div class="breadcrumb-context">
+        <div class="row align-items-center">
+            <div class="col-md-12">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb mb-0">
+                        <li class="breadcrumb-item">
+                            <a href="{% url 'instructor:course_detail' course.pk %}" class="text-decoration-none">
+                                {{ course.title }}
+                            </a>
+                        </li>
+                        <li class="breadcrumb-item active" aria-current="page">
+                            {{ module.title }}
+                        </li>
+                    </ol>
+                </nav>
+                <small class="text-muted">
+                    Module {{ module.order }} • {{ module.lessons.count }} leçon{{ module.lessons.count|pluralize }}
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" id="lesson-form">
+        {% csrf_token %}
+        
+        <!-- Informations de base -->
+        <div class="form-section">
+            <h4 class="mb-4">
+                <i class="bi bi-info-circle me-2"></i>
+                Informations générales
+            </h4>
+            
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="mb-3">
+                        <label for="{{ form.title.id_for_label }}" class="form-label">Titre de la leçon *</label>
+                        {{ form.title }}
+                        {% if form.title.errors %}
+                            <div class="text-danger">{{ form.title.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.description.id_for_label }}" class="form-label">Description courte</label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                            <div class="text-danger">{{ form.description.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-lg-4">
+                    <div class="mb-3">
+                        <label for="{{ form.order.id_for_label }}" class="form-label">Ordre *</label>
+                        {{ form.order }}
+                        {% if form.order.errors %}
+                            <div class="text-danger">{{ form.order.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.duration.id_for_label }}" class="form-label">Durée estimée</label>
+                        {{ form.duration }}
+                        <small class="text-muted">Format: HH:MM:SS</small>
+                        {% if form.duration.errors %}
+                            <div class="text-danger">{{ form.duration.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Type de leçon -->
+        <div class="form-section">
+            <h4 class="mb-4">
+                <i class="bi bi-gear me-2"></i>
+                Type de contenu
+            </h4>
+            
+            <div class="lesson-type-selector">
+                <div class="lesson-type-option" data-type="text">
+                    <i class="bi bi-file-text text-primary"></i>
+                    <strong>Texte</strong>
+                    <div class="small text-muted">Article, cours écrit</div>
+                </div>
+                
+                <div class="lesson-type-option" data-type="video">
+                    <i class="bi bi-play-circle text-danger"></i>
+                    <strong>Vidéo</strong>
+                    <div class="small text-muted">YouTube, Vimeo, fichier</div>
+                </div>
+                
+                <div class="lesson-type-option" data-type="audio">
+                    <i class="bi bi-music-note text-warning"></i>
+                    <strong>Audio</strong>
+                    <div class="small text-muted">Podcast, narration</div>
+                </div>
+                
+                <div class="lesson-type-option" data-type="document">
+                    <i class="bi bi-file-earmark-pdf text-success"></i>
+                    <strong>Document</strong>
+                    <div class="small text-muted">PDF, présentation</div>
+                </div>
+                
+                <div class="lesson-type-option" data-type="external">
+                    <i class="bi bi-link-45deg text-info"></i>
+                    <strong>Externe</strong>
+                    <div class="small text-muted">Lien vers site web</div>
+                </div>
+            </div>
+            
+            {{ form.lesson_type }}
+        </div>
+        
+        <!-- Contenu selon le type -->
+        
+        <!-- Contenu texte -->
+        <div class="form-section content-section" id="content-text">
+            <h4 class="mb-4">
+                <i class="bi bi-file-text me-2"></i>
+                Contenu textuel
+            </h4>
+            
+            <div class="mb-3">
+                <label for="{{ form.content.id_for_label }}" class="form-label">Contenu de la leçon</label>
+                {{ form.content }}
+                {% if form.content.errors %}
+                    <div class="text-danger">{{ form.content.errors.0 }}</div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Contenu vidéo -->
+        <div class="form-section content-section" id="content-video">
+            <h4 class="mb-4">
+                <i class="bi bi-play-circle me-2"></i>
+                Contenu vidéo
+            </h4>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.video_url.id_for_label }}" class="form-label">URL vidéo</label>
+                        {{ form.video_url }}
+                        <small class="text-muted">YouTube, Vimeo, etc.</small>
+                        {% if form.video_url.errors %}
+                            <div class="text-danger">{{ form.video_url.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.video_file.id_for_label }}" class="form-label">Ou télécharger un fichier</label>
+                        <div class="file-upload-area">
+                            {{ form.video_file }}
+                            <p class="mb-0">Glissez votre vidéo ici ou cliquez pour parcourir</p>
+                            <small class="text-muted">MP4, AVI, MOV (max 500MB)</small>
+                        </div>
+                        {% if form.video_file.errors %}
+                            <div class="text-danger">{{ form.video_file.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Contenu audio -->
+        <div class="form-section content-section" id="content-audio">
+            <h4 class="mb-4">
+                <i class="bi bi-music-note me-2"></i>
+                Contenu audio
+            </h4>
+            
+            <div class="mb-3">
+                <label for="{{ form.audio_file.id_for_label }}" class="form-label">Fichier audio</label>
+                <div class="file-upload-area">
+                    {{ form.audio_file }}
+                    <p class="mb-0">Glissez votre fichier audio ici ou cliquez pour parcourir</p>
+                    <small class="text-muted">MP3, WAV, OGG (max 100MB)</small>
+                </div>
+                {% if form.audio_file.errors %}
+                    <div class="text-danger">{{ form.audio_file.errors.0 }}</div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Contenu document -->
+        <div class="form-section content-section" id="content-document">
+            <h4 class="mb-4">
+                <i class="bi bi-file-earmark-pdf me-2"></i>
+                Document
+            </h4>
+            
+            <div class="mb-3">
+                <label for="{{ form.document_file.id_for_label }}" class="form-label">Fichier document</label>
+                <div class="file-upload-area">
+                    {{ form.document_file }}
+                    <p class="mb-0">Glissez votre document ici ou cliquez pour parcourir</p>
+                    <small class="text-muted">PDF, DOC, PPT (max 50MB)</small>
+                </div>
+                {% if form.document_file.errors %}
+                    <div class="text-danger">{{ form.document_file.errors.0 }}</div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Contenu externe -->
+        <div class="form-section content-section" id="content-external">
+            <h4 class="mb-4">
+                <i class="bi bi-link-45deg me-2"></i>
+                Lien externe
+            </h4>
+            
+            <div class="mb-3">
+                <label for="{{ form.external_url.id_for_label }}" class="form-label">URL externe</label>
+                {{ form.external_url }}
+                <small class="text-muted">Lien vers un site web, une application, etc.</small>
+                {% if form.external_url.errors %}
+                    <div class="text-danger">{{ form.external_url.errors.0 }}</div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Options -->
+        <div class="form-section">
+            <h4 class="mb-4">
+                <i class="bi bi-sliders me-2"></i>
+                Options de publication
+            </h4>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <div class="form-check">
+                            {{ form.is_published }}
+                            <label for="{{ form.is_published.id_for_label }}" class="form-check-label">
+                                <strong>Leçon publiée</strong>
+                                <div class="small text-muted">Visible par les étudiants</div>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            {{ form.is_preview }}
+                            <label for="{{ form.is_preview.id_for_label }}" class="form-check-label">
+                                <strong>Aperçu gratuit</strong>
+                                <div class="small text-muted">Accessible avant achat</div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <div class="form-check">
+                            {{ form.is_mandatory }}
+                            <label for="{{ form.is_mandatory.id_for_label }}" class="form-check-label">
+                                <strong>Leçon obligatoire</strong>
+                                <div class="small text-muted">Doit être complétée pour continuer</div>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.notes.id_for_label }}" class="form-label">Notes privées</label>
+                        {{ form.notes }}
+                        <small class="text-muted">Visibles seulement par vous</small>
+                        {% if form.notes.errors %}
+                            <div class="text-danger">{{ form.notes.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Actions -->
+        <div class="form-section">
+            <div class="row">
+                <div class="col-md-6">
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors }}
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <a href="{% url 'instructor:course_detail' course.pk %}" class="btn btn-outline-secondary me-2">
+                        Annuler
+                    </a>
+                    <button type="submit" class="btn btn-submit">
+                        <i class="bi bi-{% if lesson %}check-lg{% else %}plus-lg{% endif %} me-2"></i>
+                        {% if lesson %}Mettre à jour{% else %}Créer la leçon{% endif %}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const typeOptions = document.querySelectorAll('.lesson-type-option');
+    const typeSelect = document.getElementById('{{ form.lesson_type.id_for_label }}');
+    const contentSections = document.querySelectorAll('.content-section');
+    
+    // Fonction pour mettre à jour l'affichage selon le type sélectionné
+    function updateContentDisplay(selectedType) {
+        // Masquer toutes les sections
+        contentSections.forEach(section => {
+            section.classList.remove('active');
+        });
+        
+        // Retirer la classe active de tous les boutons
+        typeOptions.forEach(option => {
+            option.classList.remove('active');
+        });
+        
+        // Afficher la section correspondante
+        const targetSection = document.getElementById('content-' + selectedType);
+        if (targetSection) {
+            targetSection.classList.add('active');
+        }
+        
+        // Marquer le bouton comme actif
+        const activeOption = document.querySelector(`[data-type="${selectedType}"]`);
+        if (activeOption) {
+            activeOption.classList.add('active');
+        }
+        
+        // Mettre à jour le select caché
+        typeSelect.value = selectedType;
+    }
+    
+    // Gestionnaire de clic sur les options de type
+    typeOptions.forEach(option => {
+        option.addEventListener('click', function() {
+            const type = this.dataset.type;
+            updateContentDisplay(type);
+        });
+    });
+    
+    // Initialisation avec la valeur actuelle
+    const currentType = typeSelect.value || 'text';
+    updateContentDisplay(currentType);
+    
+    // Drag & Drop pour les fichiers
+    const uploadAreas = document.querySelectorAll('.file-upload-area');
+    uploadAreas.forEach(area => {
+        const input = area.querySelector('input[type="file"]');
+        
+        area.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            this.classList.add('dragover');
+        });
+        
+        area.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            this.classList.remove('dragover');
+        });
+        
+        area.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0 && input) {
+                input.files = files;
+            }
+        });
+    });
+    
+    // Validation du formulaire
+    const form = document.getElementById('lesson-form');
+    form.addEventListener('submit', function(e) {
+        const title = document.getElementById('{{ form.title.id_for_label }}').value.trim();
+        const type = typeSelect.value;
+        
+        if (!title) {
+            e.preventDefault();
+            alert('Veuillez saisir un titre pour la leçon.');
+            return false;
+        }
+        
+        // Validation selon le type
+        let contentValid = true;
+        let errorMessage = '';
+        
+        switch(type) {
+            case 'text':
+                const content = document.getElementById('{{ form.content.id_for_label }}').value.trim();
+                if (!content) {
+                    contentValid = false;
+                    errorMessage = 'Veuillez saisir le contenu textuel de la leçon.';
+                }
+                break;
+            case 'video':
+                const videoUrl = document.getElementById('{{ form.video_url.id_for_label }}').value.trim();
+                const videoFile = document.getElementById('{{ form.video_file.id_for_label }}').files.length;
+                if (!videoUrl && videoFile === 0) {
+                    contentValid = false;
+                    errorMessage = 'Veuillez fournir une URL vidéo ou télécharger un fichier vidéo.';
+                }
+                break;
+            case 'external':
+                const externalUrl = document.getElementById('{{ form.external_url.id_for_label }}').value.trim();
+                if (!externalUrl) {
+                    contentValid = false;
+                    errorMessage = 'Veuillez fournir une URL externe.';
+                }
+                break;
+        }
+        
+        if (!contentValid) {
+            e.preventDefault();
+            alert(errorMessage);
+            return false;
+        }
+    });
+});
+</script>
+{% endblock %}

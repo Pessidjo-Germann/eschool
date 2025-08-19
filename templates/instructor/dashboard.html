@@ -1,0 +1,329 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard Formateur - E-School{% endblock %}
+
+{% block extra_head %}
+<style>
+.dashboard-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem 0;
+    margin-bottom: 2rem;
+}
+
+.stats-card {
+    background: white;
+    border-radius: 15px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+    text-align: center;
+    transition: transform 0.2s ease;
+}
+
+.stats-card:hover {
+    transform: translateY(-5px);
+}
+
+.stats-number {
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+
+.stats-label {
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.quick-actions {
+    background: #f8f9fa;
+    border-radius: 15px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.action-btn {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    margin: 0.25rem;
+    background: white;
+    color: #495057;
+    text-decoration: none;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    transition: all 0.2s ease;
+}
+
+.action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    text-decoration: none;
+    color: #495057;
+}
+
+.course-card {
+    background: white;
+    border-radius: 15px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease;
+}
+
+.course-card:hover {
+    transform: translateY(-3px);
+}
+
+.course-status {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.status-published { background: #d4edda; color: #155724; }
+.status-draft { background: #f8d7da; color: #721c24; }
+.status-archived { background: #e2e3e5; color: #383d41; }
+
+.revenue-display {
+    color: #28a745;
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header du Dashboard -->
+<div class="dashboard-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-2">
+                    <i class="bi bi-mortarboard me-3"></i>
+                    Tableau de bord Formateur
+                </h1>
+                <p class="mb-0 lead">Bienvenue, {{ user.get_full_name|default:user.username }} !</p>
+                <small>Gérez vos cours et suivez vos performances</small>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <a href="{% url 'instructor:course_create' %}" class="btn btn-light btn-lg">
+                    <i class="bi bi-plus-circle me-2"></i>
+                    Nouveau Cours
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Statistiques rapides -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="stats-card">
+                <div class="stats-number text-primary">{{ stats.total_courses }}</div>
+                <div class="stats-label">Total des cours</div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="stats-card">
+                <div class="stats-number text-success">{{ stats.published_courses }}</div>
+                <div class="stats-label">Cours publiés</div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="stats-card">
+                <div class="stats-number text-info">{{ stats.total_students }}</div>
+                <div class="stats-label">Étudiants inscrits</div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-3">
+            <div class="stats-card">
+                <div class="stats-number text-warning">${{ stats.total_revenue|floatformat:2 }}</div>
+                <div class="stats-label">Revenus totaux</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions rapides -->
+    <div class="quick-actions">
+        <h5 class="mb-3"><i class="bi bi-lightning me-2"></i>Actions rapides</h5>
+        <div>
+            <a href="{% url 'instructor:course_create' %}" class="action-btn">
+                <i class="bi bi-plus-circle me-2"></i>Créer un cours
+            </a>
+            <a href="{% url 'instructor:courses' %}" class="action-btn">
+                <i class="bi bi-list-ul me-2"></i>Gérer mes cours
+            </a>
+            <a href="{% url 'users:profile' %}" class="action-btn">
+                <i class="bi bi-person me-2"></i>Mon profil
+            </a>
+            <a href="{% url 'courses:courses_list' %}" class="action-btn">
+                <i class="bi bi-eye me-2"></i>Voir comme étudiant
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Cours récents -->
+        <div class="col-lg-8">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4><i class="bi bi-clock-history me-2"></i>Cours récents</h4>
+                <a href="{% url 'instructor:courses' %}" class="btn btn-outline-primary btn-sm">
+                    Voir tous les cours
+                </a>
+            </div>
+            
+            {% for course in recent_courses %}
+            <div class="course-card">
+                <div class="row align-items-center">
+                    <div class="col-md-2">
+                        {% if course.thumbnail %}
+                            <img src="{{ course.thumbnail.url }}" alt="{{ course.title }}" 
+                                 class="img-fluid rounded" style="max-height: 60px;">
+                        {% else %}
+                            <div class="bg-light rounded d-flex align-items-center justify-content-center" 
+                                 style="height: 60px; width: 100%;">
+                                <i class="bi bi-book text-muted"></i>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="mb-1">{{ course.title }}</h6>
+                        <small class="text-muted">{{ course.category.name }}</small>
+                        <div class="mt-1">
+                            <span class="course-status status-{{ course.status }}">
+                                {{ course.get_status_display }}
+                            </span>
+                            {% if course.is_free %}
+                                <span class="badge bg-success ms-2">Gratuit</span>
+                            {% else %}
+                                <span class="badge bg-primary ms-2">${{ course.price }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-2 text-center">
+                        <div class="small text-muted">Étudiants</div>
+                        <strong>{{ course.enrollment_count }}</strong>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="btn-group btn-group-sm" role="group">
+                            <a href="{% url 'instructor:course_detail' course.pk %}" 
+                               class="btn btn-outline-primary" title="Voir">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            <a href="{% url 'instructor:course_edit' course.pk %}" 
+                               class="btn btn-outline-secondary" title="Modifier">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <a href="{% url 'instructor:course_analytics' course.pk %}" 
+                               class="btn btn-outline-info" title="Analytics">
+                                <i class="bi bi-graph-up"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="course-card text-center">
+                <i class="bi bi-book display-4 text-muted mb-3"></i>
+                <h5>Aucun cours créé</h5>
+                <p class="text-muted">Commencez par créer votre premier cours !</p>
+                <a href="{% url 'instructor:course_create' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle me-2"></i>Créer mon premier cours
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Panel lateral -->
+        <div class="col-lg-4">
+            <!-- Conseils et astuces -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Conseils du jour</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>📚 Structurez vos cours</strong>
+                        <p class="small mb-0">Organisez votre contenu en modules et leçons claires pour faciliter l'apprentissage.</p>
+                    </div>
+                    <div class="mb-3">
+                        <strong>🎥 Ajoutez du multimédia</strong>
+                        <p class="small mb-0">Les vidéos et ressources interactives améliorent l'engagement des étudiants.</p>
+                    </div>
+                    <div>
+                        <strong>📊 Suivez vos analytics</strong>
+                        <p class="small mb-0">Utilisez les statistiques pour optimiser vos cours et maximiser les inscriptions.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Performances -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-trophy me-2"></i>Vos performances</h6>
+                </div>
+                <div class="card-body">
+                    {% if stats.total_courses > 0 %}
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Taux de publication</span>
+                        <strong>{{ stats.published_courses }}/{{ stats.total_courses }}</strong>
+                    </div>
+                    <div class="progress mb-3">
+                        <div class="progress-bar" style="width: {% widthratio stats.published_courses stats.total_courses 100 %}%"></div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Revenus moyens/cours</span>
+                        <strong class="revenue-display">
+                            ${% if stats.published_courses > 0 %}{% widthratio stats.total_revenue stats.published_courses 1 %}{% else %}0.00{% endif %}
+                        </strong>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <span>Étudiants moyens/cours</span>
+                        <strong>
+                            {% if stats.published_courses > 0 %}{% widthratio stats.total_students stats.published_courses 1 %}{% else %}0{% endif %}
+                        </strong>
+                    </div>
+                    {% else %}
+                    <p class="text-muted text-center">Créez votre premier cours pour voir vos performances !</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Actualisation automatique des statistiques toutes les 5 minutes
+setInterval(() => {
+    location.reload();
+}, 300000);
+
+// Animation des compteurs
+document.addEventListener('DOMContentLoaded', function() {
+    const counters = document.querySelectorAll('.stats-number');
+    counters.forEach(counter => {
+        const target = parseInt(counter.textContent.replace(/[^0-9]/g, ''));
+        if (target && target > 0) {
+            let current = 0;
+            const increment = target / 50;
+            const timer = setInterval(() => {
+                current += increment;
+                if (current >= target) {
+                    current = target;
+                    clearInterval(timer);
+                }
+                counter.textContent = counter.textContent.replace(/[0-9]+/, Math.floor(current));
+            }, 20);
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -25,8 +25,13 @@ SECRET_KEY = 'django-insecure-@4n=s8ces$ubzs^7$rr^*#b_$28#w!ytti50_uwds)08-ua9*m
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'testserver','639c0652ba71.ngrok-free.app']
 
+# Configuration CSRF pour ngrok
+CSRF_TRUSTED_ORIGINS = [
+    'https://639c0652ba71.ngrok-free.app',
+    'http://639c0652ba71.ngrok-free.app',
+]
 
 # Application definition
 
@@ -40,6 +45,7 @@ INSTALLED_APPS = [
     
     # Third party apps
     'rest_framework',
+    'django_filters',
     
     # Local apps
     'core.apps.CoreConfig',
@@ -74,6 +80,9 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+            ],
+            'builtins': [
+                'courses.templatetags.course_filters',
             ],
         },
     },

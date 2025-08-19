@@ -1,0 +1,464 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ course.title }} - Détails - E-School{% endblock %}
+
+{% block extra_head %}
+<style>
+.course-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem 0;
+    margin-bottom: 2rem;
+}
+
+.course-card {
+    background: white;
+    border-radius: 15px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 15px;
+    text-align: center;
+    box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.module-card {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    border-left: 4px solid #667eea;
+}
+
+.lesson-item {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    background: white;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.lesson-item:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.lesson-type-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 1rem;
+}
+
+.type-text { background: #e3f2fd; color: #1976d2; }
+.type-video { background: #ffebee; color: #d32f2f; }
+.type-audio { background: #fff8e1; color: #f57c00; }
+.type-document { background: #e8f5e8; color: #388e3c; }
+.type-external { background: #f3e5f5; color: #7b1fa2; }
+
+.course-status {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 500;
+}
+
+.status-published { background: #d4edda; color: #155724; }
+.status-draft { background: #f8d7da; color: #721c24; }
+.status-archived { background: #e2e3e5; color: #383d41; }
+
+.action-bar {
+    background: white;
+    padding: 1rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="course-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-2">
+                {% if course.thumbnail %}
+                    <img src="{{ course.thumbnail.url }}" alt="{{ course.title }}" 
+                         class="img-fluid rounded shadow">
+                {% else %}
+                    <div class="bg-light rounded d-flex align-items-center justify-content-center shadow" 
+                         style="height: 120px;">
+                        <i class="bi bi-book display-4 text-muted"></i>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="col-md-8">
+                <h1 class="mb-2">{{ course.title }}</h1>
+                <p class="mb-2 lead">{{ course.short_description }}</p>
+                <div class="mb-3">
+                    <span class="course-status status-{{ course.status }}">
+                        {{ course.get_status_display }}
+                    </span>
+                    {% if course.is_free %}
+                        <span class="badge bg-success ms-2 fs-6">Gratuit</span>
+                    {% else %}
+                        <span class="badge bg-primary ms-2 fs-6">${{ course.price }}</span>
+                    {% endif %}
+                    <span class="badge bg-info ms-2 fs-6">{{ course.category.name }}</span>
+                </div>
+                <small class="opacity-75">
+                    Créé le {{ course.created_at|date:"d/m/Y" }} • 
+                    Mis à jour le {{ course.updated_at|date:"d/m/Y" }}
+                </small>
+            </div>
+            <div class="col-md-2 text-md-end">
+                <a href="{% url 'instructor:courses' %}" class="btn btn-light">
+                    <i class="bi bi-arrow-left me-2"></i>
+                    Retour
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Statistiques -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number text-primary">{{ stats.total_students }}</div>
+            <div class="stat-label">Étudiants inscrits</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number text-success">${{ stats.revenue|floatformat:2 }}</div>
+            <div class="stat-label">Revenus générés</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number text-info">{{ stats.total_modules }}</div>
+            <div class="stat-label">Module{{ stats.total_modules|pluralize }}</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number text-warning">{{ stats.total_lessons }}</div>
+            <div class="stat-label">Leçon{{ stats.total_lessons|pluralize }}</div>
+        </div>
+    </div>
+
+    <!-- Barre d'actions -->
+    <div class="action-bar">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="btn-group" role="group">
+                    <a href="{% url 'instructor:course_edit' course.pk %}" class="btn btn-primary">
+                        <i class="bi bi-pencil me-2"></i>Modifier le cours
+                    </a>
+                    <a href="{% url 'instructor:module_create' course.pk %}" class="btn btn-outline-primary">
+                        <i class="bi bi-plus me-2"></i>Nouveau module
+                    </a>
+                    <a href="{% url 'instructor:course_analytics' course.pk %}" class="btn btn-outline-info">
+                        <i class="bi bi-graph-up me-2"></i>Analytics
+                    </a>
+                </div>
+            </div>
+            <div class="col-md-4 text-md-end">
+                {% if course.status == 'draft' %}
+                    <form method="post" action="{% url 'instructor:course_publish' course.pk %}" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-success" 
+                                onclick="return confirm('Publier ce cours ?')">
+                            <i class="bi bi-check-circle me-2"></i>Publier
+                        </button>
+                    </form>
+                {% else %}
+                    <form method="post" action="{% url 'instructor:course_unpublish' course.pk %}" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-warning" 
+                                onclick="return confirm('Dépublier ce cours ?')">
+                            <i class="bi bi-x-circle me-2"></i>Dépublier
+                        </button>
+                    </form>
+                {% endif %}
+                
+                <form method="post" action="{% url 'instructor:course_delete' course.pk %}" 
+                      class="d-inline ms-2">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-outline-danger" 
+                            onclick="return confirm('Supprimer définitivement ce cours ?')">
+                        <i class="bi bi-trash me-2"></i>Supprimer
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Contenu principal -->
+        <div class="col-lg-8">
+            <!-- Modules et leçons -->
+            <div class="course-card">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4>
+                        <i class="bi bi-collection me-2"></i>
+                        Structure du cours
+                    </h4>
+                    <a href="{% url 'instructor:module_create' course.pk %}" class="btn btn-outline-primary">
+                        <i class="bi bi-plus me-2"></i>Ajouter un module
+                    </a>
+                </div>
+
+                {% for module in modules %}
+                <div class="module-card">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h5 class="mb-1">
+                                Module {{ module.order }}: {{ module.title }}
+                                {% if not module.is_published %}
+                                    <small class="badge bg-warning">Brouillon</small>
+                                {% endif %}
+                                {% if module.is_free %}
+                                    <small class="badge bg-success">Gratuit</small>
+                                {% endif %}
+                            </h5>
+                            {% if module.description %}
+                                <p class="text-muted mb-0">{{ module.description }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="btn-group btn-group-sm">
+                            <a href="{% url 'instructor:lesson_create' course.pk module.pk %}" 
+                               class="btn btn-outline-primary" title="Ajouter une leçon">
+                                <i class="bi bi-plus"></i>
+                            </a>
+                            <a href="{% url 'instructor:module_edit' course.pk module.pk %}" 
+                               class="btn btn-outline-secondary" title="Modifier">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <form method="post" action="{% url 'instructor:module_delete' course.pk module.pk %}" 
+                                  class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-outline-danger" title="Supprimer"
+                                        onclick="return confirm('Supprimer ce module ?')">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Leçons du module -->
+                    {% for lesson in module.lessons.all %}
+                    <div class="lesson-item">
+                        <div class="lesson-type-icon type-{{ lesson.lesson_type }}">
+                            <i class="bi bi-{% if lesson.lesson_type == 'video' %}play-circle{% elif lesson.lesson_type == 'audio' %}music-note{% elif lesson.lesson_type == 'document' %}file-earmark{% elif lesson.lesson_type == 'external' %}link-45deg{% else %}file-text{% endif %}"></i>
+                        </div>
+                        
+                        <div class="flex-grow-1">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-1">
+                                        {{ lesson.order }}. {{ lesson.title }}
+                                        {% if not lesson.is_published %}
+                                            <small class="badge bg-warning">Brouillon</small>
+                                        {% endif %}
+                                        {% if lesson.is_preview %}
+                                            <small class="badge bg-info">Aperçu</small>
+                                        {% endif %}
+                                        {% if lesson.is_mandatory %}
+                                            <small class="badge bg-danger">Obligatoire</small>
+                                        {% endif %}
+                                    </h6>
+                                    {% if lesson.description %}
+                                        <p class="text-muted mb-1">{{ lesson.description|truncatewords:15 }}</p>
+                                    {% endif %}
+                                    <small class="text-muted">
+                                        {% if lesson.duration %}
+                                            <i class="bi bi-clock me-1"></i>{{ lesson.duration }}
+                                        {% endif %}
+                                        <i class="bi bi-person ms-3 me-1"></i>{{ lesson.lesson_type|title }}
+                                    </small>
+                                </div>
+                                
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'instructor:lesson_detail' course.pk module.pk lesson.pk %}" 
+                                       class="btn btn-outline-primary" title="Voir détails">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="{% url 'instructor:lesson_edit' course.pk module.pk lesson.pk %}" 
+                                       class="btn btn-outline-secondary" title="Modifier">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center py-3">
+                        <i class="bi bi-plus-circle text-muted me-2"></i>
+                        <span class="text-muted">Aucune leçon dans ce module</span>
+                        <a href="{% url 'instructor:lesson_create' course.pk module.pk %}" 
+                           class="btn btn-sm btn-outline-primary ms-2">
+                            Créer la première leçon
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% empty %}
+                <div class="text-center py-5">
+                    <i class="bi bi-collection display-4 text-muted mb-3"></i>
+                    <h5>Aucun module créé</h5>
+                    <p class="text-muted">Commencez par créer votre premier module pour structurer votre cours.</p>
+                    <a href="{% url 'instructor:module_create' course.pk %}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle me-2"></i>Créer le premier module
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Informations du cours -->
+            <div class="course-card">
+                <h5 class="mb-3">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Informations
+                </h5>
+                
+                <div class="mb-3">
+                    <strong>Catégorie:</strong> {{ course.category.name }}
+                </div>
+                
+                <div class="mb-3">
+                    <strong>Difficulté:</strong> {{ course.get_difficulty_display }}
+                </div>
+                
+                <div class="mb-3">
+                    <strong>Langue:</strong> {{ course.get_language_display }}
+                </div>
+                
+                {% if course.tags.exists %}
+                <div class="mb-3">
+                    <strong>Tags:</strong><br>
+                    {% for tag in course.tags.all %}
+                        <span class="badge bg-secondary me-1">{{ tag.name }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                
+                {% if course.has_certificate %}
+                <div class="mb-3">
+                    <i class="bi bi-award text-warning me-2"></i>
+                    <span>Certificat délivré</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Description -->
+            {% if course.description %}
+            <div class="course-card">
+                <h5 class="mb-3">
+                    <i class="bi bi-card-text me-2"></i>
+                    Description
+                </h5>
+                <div class="text-muted">
+                    {{ course.description|linebreaksbr }}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Objectifs -->
+            {% if course.learning_objectives %}
+            <div class="course-card">
+                <h5 class="mb-3">
+                    <i class="bi bi-target me-2"></i>
+                    Objectifs d'apprentissage
+                </h5>
+                <div class="text-muted">
+                    {{ course.learning_objectives|linebreaksbr }}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Prérequis -->
+            {% if course.prerequisites %}
+            <div class="course-card">
+                <h5 class="mb-3">
+                    <i class="bi bi-list-check me-2"></i>
+                    Prérequis
+                </h5>
+                <div class="text-muted">
+                    {{ course.prerequisites|linebreaksbr }}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Animation pour les statistiques
+    const statNumbers = document.querySelectorAll('.stat-number');
+    statNumbers.forEach(stat => {
+        const finalValue = parseInt(stat.textContent.replace(/[^\d]/g, ''));
+        if (finalValue > 0) {
+            let currentValue = 0;
+            const increment = Math.ceil(finalValue / 20);
+            
+            const timer = setInterval(() => {
+                currentValue += increment;
+                if (currentValue >= finalValue) {
+                    currentValue = finalValue;
+                    clearInterval(timer);
+                }
+                
+                // Préserver le symbole $ si présent
+                if (stat.textContent.includes('$')) {
+                    stat.textContent = '$' + currentValue.toFixed(2);
+                } else {
+                    stat.textContent = currentValue;
+                }
+            }, 50);
+        }
+    });
+    
+    // Tooltips pour les badges de statut
+    const badges = document.querySelectorAll('[title]');
+    badges.forEach(badge => {
+        new bootstrap.Tooltip(badge);
+    });
+});
+</script>
+{% endblock %}

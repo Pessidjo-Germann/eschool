@@ -1,0 +1,351 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }} - E-School{% endblock %}
+
+{% block extra_head %}
+<style>
+.form-section {
+    background: white;
+    border-radius: 15px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+}
+
+.form-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem 0;
+    margin-bottom: 2rem;
+}
+
+.tag-checkbox {
+    display: inline-block;
+    margin: 0.25rem 0.5rem 0.25rem 0;
+    padding: 0.5rem 1rem;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 20px;
+    transition: all 0.2s ease;
+}
+
+.tag-checkbox input[type="checkbox"] {
+    margin-right: 0.5rem;
+}
+
+.tag-checkbox:hover {
+    background: #e9ecef;
+    border-color: #adb5bd;
+}
+
+.tag-checkbox input[type="checkbox"]:checked + span {
+    color: #495057;
+    font-weight: 500;
+}
+
+.price-toggle {
+    background: #e9ecef;
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.btn-submit {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    padding: 1rem 2rem;
+    border-radius: 10px;
+    color: white;
+    font-weight: 500;
+    transition: transform 0.2s ease;
+}
+
+.btn-submit:hover {
+    transform: translateY(-2px);
+    color: white;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="form-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-2">
+                    <i class="bi bi-{% if course %}pencil{% else %}plus-circle{% endif %} me-3"></i>
+                    {{ page_title }}
+                </h1>
+                {% if course %}
+                    <p class="mb-0 lead">Modifiez les détails de votre cours</p>
+                {% else %}
+                    <p class="mb-0 lead">Créez un nouveau cours pour vos étudiants</p>
+                {% endif %}
+            </div>
+            <div class="col-md-4 text-md-end">
+                <a href="{% url 'instructor:courses' %}" class="btn btn-light">
+                    <i class="bi bi-arrow-left me-2"></i>
+                    Retour aux cours
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <!-- Informations de base -->
+        <div class="form-section">
+            <h4 class="mb-4">
+                <i class="bi bi-info-circle me-2"></i>
+                Informations générales
+            </h4>
+            
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="mb-3">
+                        <label for="{{ form.title.id_for_label }}" class="form-label">Titre du cours *</label>
+                        {{ form.title }}
+                        {% if form.title.errors %}
+                            <div class="text-danger">{{ form.title.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.short_description.id_for_label }}" class="form-label">Description courte *</label>
+                        {{ form.short_description }}
+                        <small class="text-muted">Maximum 300 caractères</small>
+                        {% if form.short_description.errors %}
+                            <div class="text-danger">{{ form.short_description.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.description.id_for_label }}" class="form-label">Description complète *</label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                            <div class="text-danger">{{ form.description.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-lg-4">
+                    <div class="mb-3">
+                        <label for="{{ form.thumbnail.id_for_label }}" class="form-label">Image de couverture</label>
+                        {{ form.thumbnail }}
+                        {% if course.thumbnail %}
+                            <div class="mt-2">
+                                <img src="{{ course.thumbnail.url }}" alt="Aperçu" class="img-thumbnail" style="max-height: 150px;">
+                            </div>
+                        {% endif %}
+                        {% if form.thumbnail.errors %}
+                            <div class="text-danger">{{ form.thumbnail.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Catégorisation -->
+        <div class="form-section">
+            <h4 class="mb-4">
+                <i class="bi bi-tags me-2"></i>
+                Catégorie et tags
+            </h4>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.category.id_for_label }}" class="form-label">Catégorie *</label>
+                        {{ form.category }}
+                        {% if form.category.errors %}
+                            <div class="text-danger">{{ form.category.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.difficulty.id_for_label }}" class="form-label">Niveau de difficulté</label>
+                        {{ form.difficulty }}
+                        {% if form.difficulty.errors %}
+                            <div class="text-danger">{{ form.difficulty.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.language.id_for_label }}" class="form-label">Langue</label>
+                        {{ form.language }}
+                        {% if form.language.errors %}
+                            <div class="text-danger">{{ form.language.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Tags</label>
+                        <div class="tags-container">
+                            {% for choice in form.tags %}
+                                <label class="tag-checkbox">
+                                    {{ choice.tag }}
+                                    <span>{{ choice.choice_label }}</span>
+                                </label>
+                            {% endfor %}
+                        </div>
+                        {% if form.tags.errors %}
+                            <div class="text-danger">{{ form.tags.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Prix et accès -->
+        <div class="form-section">
+            <h4 class="mb-4">
+                <i class="bi bi-currency-dollar me-2"></i>
+                Prix et accès
+            </h4>
+            
+            <div class="price-toggle">
+                <div class="form-check mb-3">
+                    {{ form.is_free }}
+                    <label for="{{ form.is_free.id_for_label }}" class="form-check-label">
+                        <strong>Cours gratuit</strong>
+                    </label>
+                </div>
+                
+                <div class="row" id="price-section">
+                    <div class="col-md-4">
+                        <div class="mb-3">
+                            <label for="{{ form.price.id_for_label }}" class="form-label">Prix (USD) *</label>
+                            {{ form.price }}
+                            {% if form.price.errors %}
+                                <div class="text-danger">{{ form.price.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-check">
+                {{ form.has_certificate }}
+                <label for="{{ form.has_certificate.id_for_label }}" class="form-check-label">
+                    Délivrer un certificat de fin de formation
+                </label>
+            </div>
+        </div>
+        
+        <!-- Détails pédagogiques -->
+        <div class="form-section">
+            <h4 class="mb-4">
+                <i class="bi bi-book me-2"></i>
+                Informations pédagogiques
+            </h4>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.prerequisites.id_for_label }}" class="form-label">Prérequis</label>
+                        {{ form.prerequisites }}
+                        {% if form.prerequisites.errors %}
+                            <div class="text-danger">{{ form.prerequisites.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.target_audience.id_for_label }}" class="form-label">Public cible</label>
+                        {{ form.target_audience }}
+                        {% if form.target_audience.errors %}
+                            <div class="text-danger">{{ form.target_audience.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.learning_objectives.id_for_label }}" class="form-label">Objectifs d'apprentissage</label>
+                        {{ form.learning_objectives }}
+                        <small class="text-muted">Décrivez ce que les étudiants apprendront</small>
+                        {% if form.learning_objectives.errors %}
+                            <div class="text-danger">{{ form.learning_objectives.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Actions -->
+        <div class="form-section">
+            <div class="row">
+                <div class="col-md-6">
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors }}
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <a href="{% url 'instructor:courses' %}" class="btn btn-outline-secondary me-2">
+                        Annuler
+                    </a>
+                    <button type="submit" class="btn btn-submit">
+                        <i class="bi bi-{% if course %}check-lg{% else %}plus-lg{% endif %} me-2"></i>
+                        {% if course %}Mettre à jour{% else %}Créer le cours{% endif %}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const isFreeCheckbox = document.getElementById('{{ form.is_free.id_for_label }}');
+    const priceSection = document.getElementById('price-section');
+    const priceInput = document.getElementById('{{ form.price.id_for_label }}');
+    
+    function togglePriceSection() {
+        if (isFreeCheckbox.checked) {
+            priceSection.style.display = 'none';
+            priceInput.value = '0.00';
+        } else {
+            priceSection.style.display = 'block';
+            if (priceInput.value === '0.00') {
+                priceInput.value = '';
+            }
+        }
+    }
+    
+    // Initial state
+    togglePriceSection();
+    
+    // Listen for changes
+    isFreeCheckbox.addEventListener('change', togglePriceSection);
+    
+    // Form validation
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        const title = document.getElementById('{{ form.title.id_for_label }}').value.trim();
+        const description = document.getElementById('{{ form.description.id_for_label }}').value.trim();
+        
+        if (!title || !description) {
+            e.preventDefault();
+            alert('Veuillez remplir tous les champs obligatoires.');
+            return false;
+        }
+        
+        if (!isFreeCheckbox.checked && (!priceInput.value || parseFloat(priceInput.value) <= 0)) {
+            e.preventDefault();
+            alert('Veuillez indiquer un prix valide pour un cours payant.');
+            return false;
+        }
+    });
+});
+</script>
+{% endblock %}

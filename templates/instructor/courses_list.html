@@ -1,0 +1,338 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Mes Cours - E-School{% endblock %}
+
+{% block extra_head %}
+<style>
+.courses-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem 0;
+    margin-bottom: 2rem;
+}
+
+.course-card {
+    background: white;
+    border-radius: 15px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease;
+}
+
+.course-card:hover {
+    transform: translateY(-3px);
+}
+
+.course-thumbnail {
+    width: 100px;
+    height: 75px;
+    object-fit: cover;
+    border-radius: 10px;
+}
+
+.course-status {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.status-published { background: #d4edda; color: #155724; }
+.status-draft { background: #f8d7da; color: #721c24; }
+.status-archived { background: #e2e3e5; color: #383d41; }
+
+.stats-mini {
+    display: inline-block;
+    margin-right: 1rem;
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+.action-buttons .btn {
+    margin: 0 0.25rem;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: #6c757d;
+}
+
+.empty-state i {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.filters-section {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 15px;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="courses-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-2">
+                    <i class="bi bi-collection me-3"></i>
+                    Mes Cours
+                </h1>
+                <p class="mb-0 lead">Gérez et organisez votre contenu pédagogique</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <a href="{% url 'instructor:course_create' %}" class="btn btn-light btn-lg">
+                    <i class="bi bi-plus-circle me-2"></i>
+                    Nouveau Cours
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Filtres et recherche -->
+    <div class="filters-section">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <input type="text" name="search" class="form-control" 
+                       placeholder="Rechercher un cours..." value="{{ request.GET.search }}">
+            </div>
+            <div class="col-md-3">
+                <select name="status" class="form-select">
+                    <option value="">Tous les statuts</option>
+                    <option value="draft" {% if request.GET.status == 'draft' %}selected{% endif %}>Brouillon</option>
+                    <option value="published" {% if request.GET.status == 'published' %}selected{% endif %}>Publié</option>
+                    <option value="archived" {% if request.GET.status == 'archived' %}selected{% endif %}>Archivé</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select name="category" class="form-select">
+                    <option value="">Toutes les catégories</option>
+                    {% for category in categories %}
+                        <option value="{{ category.id }}" {% if request.GET.category == category.id|stringformat:"s" %}selected{% endif %}>
+                            {{ category.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-search"></i> Filtrer
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Liste des cours -->
+    {% if courses %}
+        <div class="row">
+            <div class="col-lg-8">
+                {% for course in courses %}
+                <div class="course-card">
+                    <div class="row align-items-center">
+                        <div class="col-md-2">
+                            {% if course.thumbnail %}
+                                <img src="{{ course.thumbnail.url }}" alt="{{ course.title }}" 
+                                     class="course-thumbnail">
+                            {% else %}
+                                <div class="course-thumbnail bg-light d-flex align-items-center justify-content-center">
+                                    <i class="bi bi-book text-muted"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-5">
+                            <h5 class="mb-2">{{ course.title }}</h5>
+                            <p class="text-muted mb-2">{{ course.short_description|truncatewords:15 }}</p>
+                            
+                            <div class="mb-2">
+                                <span class="course-status status-{{ course.status }}">
+                                    {{ course.get_status_display }}
+                                </span>
+                                {% if course.is_free %}
+                                    <span class="badge bg-success ms-2">Gratuit</span>
+                                {% else %}
+                                    <span class="badge bg-primary ms-2">${{ course.price }}</span>
+                                {% endif %}
+                                <span class="badge bg-info ms-2">{{ course.category.name }}</span>
+                            </div>
+                            
+                            <div class="stats-mini">
+                                <i class="bi bi-people"></i> {{ course.enrollment_count }} étudiants
+                                <i class="bi bi-collection ms-2"></i> {{ course.modules.count }} modules
+                                <i class="bi bi-play-circle ms-2"></i> {{ course.total_lessons }} leçons
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-3 text-center">
+                            <div class="mb-2">
+                                <strong>${{ course.total_revenue|floatformat:2 }}</strong>
+                                <div class="small text-muted">Revenus</div>
+                            </div>
+                            
+                            <div class="small text-muted">
+                                Créé le {{ course.created_at|date:"d/m/Y" }}
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-2">
+                            <div class="action-buttons">
+                                <div class="btn-group-vertical w-100" role="group">
+                                    <a href="{% url 'instructor:course_detail' course.pk %}" 
+                                       class="btn btn-outline-primary btn-sm mb-1" title="Voir détails">
+                                        <i class="bi bi-eye me-1"></i> Détails
+                                    </a>
+                                    
+                                    <a href="{% url 'instructor:course_edit' course.pk %}" 
+                                       class="btn btn-outline-secondary btn-sm mb-1" title="Modifier">
+                                        <i class="bi bi-pencil me-1"></i> Modifier
+                                    </a>
+                                    
+                                    {% if course.status == 'draft' %}
+                                        <form method="post" action="{% url 'instructor:course_publish' course.pk %}" class="mb-1">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-outline-success btn-sm w-100" title="Publier">
+                                                <i class="bi bi-check-circle me-1"></i> Publier
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        <form method="post" action="{% url 'instructor:course_unpublish' course.pk %}" class="mb-1">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-outline-warning btn-sm w-100" title="Dépublier">
+                                                <i class="bi bi-x-circle me-1"></i> Dépublier
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                    
+                                    <a href="{% url 'instructor:course_analytics' course.pk %}" 
+                                       class="btn btn-outline-info btn-sm" title="Analytics">
+                                        <i class="bi bi-graph-up me-1"></i> Analytics
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Sidebar avec résumé -->
+            <div class="col-lg-4">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="bi bi-bar-chart me-2"></i>Résumé</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Total des cours</span>
+                            <strong>{{ courses.count }}</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Cours publiés</span>
+                            <strong class="text-success">
+                                {{ courses|length }}
+                            </strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Brouillons</span>
+                            <strong class="text-warning">
+                                {{ courses|length }}
+                            </strong>
+                        </div>
+                        <hr>
+                        <div class="d-flex justify-content-between">
+                            <span>Revenus totaux</span>
+                            <strong class="text-primary">${{ total_revenue|floatformat:2 }}</strong>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="bi bi-lightbulb me-2"></i>Conseils</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <strong>📈 Optimisez vos titres</strong>
+                            <p class="small mb-0">Des titres clairs et accrocheurs améliorent le taux de clic.</p>
+                        </div>
+                        <div class="mb-3">
+                            <strong>🎯 Définissez vos objectifs</strong>
+                            <p class="small mb-0">Des objectifs d'apprentissage précis aident les étudiants à choisir.</p>
+                        </div>
+                        <div>
+                            <strong>💰 Stratégie de prix</strong>
+                            <p class="small mb-0">Proposez du contenu gratuit pour attirer puis des cours payants.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <!-- État vide -->
+        <div class="empty-state">
+            <i class="bi bi-book text-muted"></i>
+            <h3>Aucun cours trouvé</h3>
+            <p>{% if request.GET.search or request.GET.status or request.GET.category %}
+                Aucun cours ne correspond à vos critères de recherche.
+            {% else %}
+                Commencez par créer votre premier cours !
+            {% endif %}</p>
+            
+            {% if not request.GET.search and not request.GET.status and not request.GET.category %}
+                <a href="{% url 'instructor:course_create' %}" class="btn btn-primary btn-lg">
+                    <i class="bi bi-plus-circle me-2"></i>Créer mon premier cours
+                </a>
+            {% else %}
+                <a href="{% url 'instructor:courses' %}" class="btn btn-outline-primary">
+                    <i class="bi bi-arrow-left me-2"></i>Voir tous les cours
+                </a>
+            {% endif %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Confirmation pour les actions sensibles
+    const publishForms = document.querySelectorAll('form[action*="publish"]');
+    const unpublishForms = document.querySelectorAll('form[action*="unpublish"]');
+    
+    publishForms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            if (!confirm('Êtes-vous sûr de vouloir publier ce cours ?')) {
+                e.preventDefault();
+            }
+        });
+    });
+    
+    unpublishForms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            if (!confirm('Êtes-vous sûr de vouloir dépublier ce cours ?')) {
+                e.preventDefault();
+            }
+        });
+    });
+    
+    // Auto-submit sur changement de filtre (optionnel)
+    const selectFilters = document.querySelectorAll('.filters-section select');
+    selectFilters.forEach(select => {
+        select.addEventListener('change', function() {
+            // Optionnellement soumettre automatiquement
+            // this.closest('form').submit();
+        });
+    });
+});
+</script>
+{% endblock %}

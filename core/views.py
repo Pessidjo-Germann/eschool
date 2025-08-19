@@ -184,11 +184,39 @@ def student_dashboard(request):
 @instructor_required 
 def instructor_dashboard(request):
     """Dashboard view for instructors only"""
-    return render(request, 'demo/instructor_dashboard.html', {
+    from courses.models import Course, Enrollment
+    from django.db.models import Count, Sum, Avg
+    
+    # Récupérer les cours de l'instructeur
+    courses = Course.objects.filter(instructor=request.user).select_related('category').prefetch_related('tags')
+    
+    # Statistiques
+    total_courses = courses.count()
+    published_courses = courses.filter(status='published').count()
+    draft_courses = courses.filter(status='draft').count()
+    
+    # Inscriptions et revenus
+    enrollments = Enrollment.objects.filter(course__instructor=request.user)
+    total_students = enrollments.values('user').distinct().count()
+    total_revenue = enrollments.aggregate(Sum('amount_paid'))['amount_paid__sum'] or 0
+    
+    # Cours récents (5 derniers)
+    recent_courses = courses.order_by('-updated_at')[:5]
+    
+    context = {
         'user': request.user,
-        'courses_created': 10,  # Demo data
-        'total_students': 150,
-    })
+        'courses': courses,
+        'recent_courses': recent_courses,
+        'stats': {
+            'total_courses': total_courses,
+            'published_courses': published_courses,
+            'draft_courses': draft_courses,
+            'total_students': total_students,
+            'total_revenue': total_revenue,
+        }
+    }
+    
+    return render(request, 'instructor/dashboard.html', context)
 
 
 @admin_required

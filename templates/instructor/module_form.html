@@ -1,0 +1,238 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }} - E-School{% endblock %}
+
+{% block extra_head %}
+<style>
+.form-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem 0;
+    margin-bottom: 2rem;
+}
+
+.form-section {
+    background: white;
+    border-radius: 15px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+}
+
+.course-context {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 10px;
+    margin-bottom: 1.5rem;
+    border-left: 4px solid #667eea;
+}
+
+.btn-submit {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    padding: 1rem 2rem;
+    border-radius: 10px;
+    color: white;
+    font-weight: 500;
+    transition: transform 0.2s ease;
+}
+
+.btn-submit:hover {
+    transform: translateY(-2px);
+    color: white;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="form-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-2">
+                    <i class="bi bi-{% if module %}pencil{% else %}plus-circle{% endif %} me-3"></i>
+                    {{ page_title }}
+                </h1>
+                <p class="mb-0 lead">{% if module %}Modifiez{% else %}Créez{% endif %} un module de cours</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <a href="{% url 'instructor:course_detail' course.pk %}" class="btn btn-light">
+                    <i class="bi bi-arrow-left me-2"></i>
+                    Retour au cours
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Contexte du cours -->
+    <div class="course-context">
+        <div class="row align-items-center">
+            <div class="col-md-2">
+                {% if course.thumbnail %}
+                    <img src="{{ course.thumbnail.url }}" alt="{{ course.title }}" 
+                         class="img-fluid rounded" style="max-height: 60px;">
+                {% else %}
+                    <div class="bg-light rounded d-flex align-items-center justify-content-center" 
+                         style="height: 60px; width: 100%;">
+                        <i class="bi bi-book text-muted"></i>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="col-md-10">
+                <h5 class="mb-1">{{ course.title }}</h5>
+                <p class="mb-0 text-muted">{{ course.short_description }}</p>
+                <small class="text-muted">
+                    <i class="bi bi-collection me-1"></i>{{ course.modules.count }} modules
+                    <i class="bi bi-people ms-3 me-1"></i>{{ course.enrollment_count }} étudiants
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <!-- Informations du module -->
+        <div class="form-section">
+            <h4 class="mb-4">
+                <i class="bi bi-info-circle me-2"></i>
+                Informations du module
+            </h4>
+            
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="mb-3">
+                        <label for="{{ form.title.id_for_label }}" class="form-label">Titre du module *</label>
+                        {{ form.title }}
+                        {% if form.title.errors %}
+                            <div class="text-danger">{{ form.title.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.description.id_for_label }}" class="form-label">Description du module</label>
+                        {{ form.description }}
+                        <small class="text-muted">Décrivez ce que les étudiants apprendront dans ce module</small>
+                        {% if form.description.errors %}
+                            <div class="text-danger">{{ form.description.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-lg-4">
+                    <div class="mb-3">
+                        <label for="{{ form.order.id_for_label }}" class="form-label">Ordre d'affichage *</label>
+                        {{ form.order }}
+                        <small class="text-muted">Position du module dans le cours</small>
+                        {% if form.order.errors %}
+                            <div class="text-danger">{{ form.order.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            {{ form.is_published }}
+                            <label for="{{ form.is_published.id_for_label }}" class="form-check-label">
+                                <strong>Module publié</strong>
+                                <div class="small text-muted">Visible par les étudiants</div>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            {{ form.is_free }}
+                            <label for="{{ form.is_free.id_for_label }}" class="form-check-label">
+                                <strong>Module gratuit</strong>
+                                <div class="small text-muted">Accessible sans inscription payante</div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Actions -->
+        <div class="form-section">
+            <div class="row">
+                <div class="col-md-6">
+                    {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors }}
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <a href="{% url 'instructor:course_detail' course.pk %}" class="btn btn-outline-secondary me-2">
+                        Annuler
+                    </a>
+                    <button type="submit" class="btn btn-submit">
+                        <i class="bi bi-{% if module %}check-lg{% else %}plus-lg{% endif %} me-2"></i>
+                        {% if module %}Mettre à jour{% else %}Créer le module{% endif %}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+    
+    <!-- Aide -->
+    <div class="form-section">
+        <h5 class="mb-3"><i class="bi bi-lightbulb me-2"></i>Conseils pour créer un bon module</h5>
+        <div class="row">
+            <div class="col-md-4">
+                <div class="mb-3">
+                    <strong>📚 Structure claire</strong>
+                    <p class="small mb-0">Organisez votre contenu de manière logique et progressive.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="mb-3">
+                    <strong>🎯 Objectifs précis</strong>
+                    <p class="small mb-0">Définissez clairement ce que les étudiants vont apprendre.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="mb-3">
+                    <strong>⏱️ Durée optimale</strong>
+                    <p class="small mb-0">Visez 30-45 minutes de contenu par module pour maintenir l'attention.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Form validation
+    const form = document.querySelector('form');
+    form.addEventListener('submit', function(e) {
+        const title = document.getElementById('{{ form.title.id_for_label }}').value.trim();
+        const order = document.getElementById('{{ form.order.id_for_label }}').value;
+        
+        if (!title) {
+            e.preventDefault();
+            alert('Veuillez saisir un titre pour le module.');
+            return false;
+        }
+        
+        if (!order || parseInt(order) < 1) {
+            e.preventDefault();
+            alert('Veuillez indiquer un ordre d\'affichage valide (nombre positif).');
+            return false;
+        }
+    });
+    
+    // Auto-focus sur le champ titre
+    const titleInput = document.getElementById('{{ form.title.id_for_label }}');
+    if (titleInput && !titleInput.value) {
+        titleInput.focus();
+    }
+});
+</script>
+{% endblock %}
