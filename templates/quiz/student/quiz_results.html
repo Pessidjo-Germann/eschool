@@ -1,0 +1,585 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Résultats - {{ quiz.title }} - {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.results-hero {
+    background: linear-gradient(135deg, 
+        {% if attempt.passed %}#28a745, #20c997{% else %}#dc3545, #fd7e14{% endif %});
+    color: white;
+    padding: 3rem 0;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+.results-hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="1" fill="rgba(255,255,255,0.1)"/></svg>') repeat;
+    animation: float 20s linear infinite;
+}
+@keyframes float {
+    0% { transform: translate(-50%, -50%) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+.results-content {
+    position: relative;
+    z-index: 2;
+}
+.score-circle {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 2rem;
+    border: 4px solid rgba(255,255,255,0.3);
+}
+.score-display {
+    font-size: 2.5rem;
+    font-weight: bold;
+}
+.stats-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    border: 1px solid #e9ecef;
+    height: 100%;
+    transition: transform 0.2s;
+}
+.stats-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+}
+.stats-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+    font-size: 1.5rem;
+}
+.question-result {
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+.question-result:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+.question-result.correct {
+    border-left: 4px solid #28a745;
+}
+.question-result.incorrect {
+    border-left: 4px solid #dc3545;
+}
+.question-result.unanswered {
+    border-left: 4px solid #6c757d;
+}
+.question-header {
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-bottom: 1px solid #e9ecef;
+}
+.question-body {
+    padding: 1rem;
+}
+.choice-result {
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    border-radius: 6px;
+    border: 1px solid #e9ecef;
+}
+.choice-result.user-selected {
+    background-color: #e7f3ff;
+    border-color: #007bff;
+}
+.choice-result.correct-answer {
+    background-color: #d4edda;
+    border-color: #28a745;
+}
+.choice-result.user-selected.incorrect {
+    background-color: #f8d7da;
+    border-color: #dc3545;
+}
+.comparison-chart {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    border: 1px solid #e9ecef;
+}
+.attempt-timeline {
+    position: relative;
+    padding-left: 2rem;
+}
+.attempt-timeline::before {
+    content: '';
+    position: absolute;
+    left: 0.5rem;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: #e9ecef;
+}
+.attempt-item {
+    position: relative;
+    padding: 1rem 0;
+    border-bottom: 1px solid #f1f3f4;
+}
+.attempt-item::before {
+    content: '';
+    position: absolute;
+    left: -0.75rem;
+    top: 1.5rem;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #007bff;
+    border: 2px solid white;
+    box-shadow: 0 0 0 2px #e9ecef;
+}
+.attempt-item.current::before {
+    background: #28a745;
+    box-shadow: 0 0 0 2px #28a745;
+}
+.action-buttons {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1.5rem;
+    text-align: center;
+    position: sticky;
+    top: 1rem;
+}
+.progress-comparison {
+    background: linear-gradient(90deg, #e9ecef 0%, #e9ecef 100%);
+    height: 8px;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+}
+.progress-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.5s ease;
+}
+.user-answer {
+    background-color: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 6px;
+    padding: 0.75rem;
+    margin-top: 0.5rem;
+}
+.correct-answer {
+    background-color: #d4edda;
+    border: 1px solid #c3e6cb;
+    border-radius: 6px;
+    padding: 0.75rem;
+    margin-top: 0.5rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section avec résultats -->
+<div class="results-hero">
+    <div class="container results-content">
+        <div class="score-circle">
+            <div class="score-display">{{ attempt.score|floatformat:0 }}%</div>
+        </div>
+        
+        <h1 class="display-5 fw-bold mb-3">
+            {% if attempt.passed %}
+            <i class="fas fa-trophy me-3"></i>Félicitations !
+            {% else %}
+            <i class="fas fa-redo me-3"></i>Continuez vos efforts
+            {% endif %}
+        </h1>
+        
+        <p class="lead mb-4">
+            {% if attempt.passed %}
+            Vous avez réussi le quiz "{{ quiz.title }}" avec un score de {{ attempt.score|floatformat:1 }}%
+            {% else %}
+            Vous avez obtenu {{ attempt.score|floatformat:1 }}% au quiz "{{ quiz.title }}". Le seuil de réussite est de {{ quiz.passing_score }}%
+            {% endif %}
+        </p>
+        
+        <div class="row justify-content-center">
+            <div class="col-auto">
+                <div class="d-flex gap-4 text-center">
+                    <div>
+                        <div class="h4 mb-0">{{ correct_answers }}</div>
+                        <div class="small opacity-75">Bonnes réponses</div>
+                    </div>
+                    <div>
+                        <div class="h4 mb-0">{{ total_questions }}</div>
+                        <div class="small opacity-75">Questions</div>
+                    </div>
+                    {% if attempt.time_taken %}
+                    <div>
+                        <div class="h4 mb-0">{{ attempt.time_taken.total_seconds|floatformat:0 }}s</div>
+                        <div class="small opacity-75">Temps pris</div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container mt-4">
+    <div class="row">
+        <!-- Contenu principal -->
+        <div class="col-lg-8">
+            <!-- Statistiques détaillées -->
+            <div class="row mb-4">
+                <div class="col-md-3 mb-3">
+                    <div class="stats-card text-center">
+                        <div class="stats-icon bg-success text-white">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <h4 class="text-success mb-1">{{ correct_answers }}</h4>
+                        <div class="text-muted small">Correctes</div>
+                    </div>
+                </div>
+                
+                <div class="col-md-3 mb-3">
+                    <div class="stats-card text-center">
+                        <div class="stats-icon bg-danger text-white">
+                            <i class="fas fa-times"></i>
+                        </div>
+                        <h4 class="text-danger mb-1">{{ total_questions|add:"-"|add:correct_answers }}</h4>
+                        <div class="text-muted small">Incorrectes</div>
+                    </div>
+                </div>
+                
+                <div class="col-md-3 mb-3">
+                    <div class="stats-card text-center">
+                        <div class="stats-icon bg-warning text-white">
+                            <i class="fas fa-question"></i>
+                        </div>
+                        <h4 class="text-warning mb-1">{{ total_questions|add:"-"|add:answered_questions }}</h4>
+                        <div class="text-muted small">Non répondues</div>
+                    </div>
+                </div>
+                
+                <div class="col-md-3 mb-3">
+                    <div class="stats-card text-center">
+                        <div class="stats-icon bg-primary text-white">
+                            <i class="fas fa-percentage"></i>
+                        </div>
+                        <h4 class="text-primary mb-1">{{ correct_answers|mul:100|div:total_questions|floatformat:0 }}%</h4>
+                        <div class="text-muted small">Taux de réussite</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Révision des questions -->
+            {% if show_corrections %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list-check me-2"></i>
+                        Révision des Questions
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    {% for result_data in results_data %}
+                    {% with question=result_data.question answer=result_data.answer %}
+                    <div class="question-result {% if answer.is_correct %}correct{% elif answer.answer_data %}incorrect{% else %}unanswered{% endif %}">
+                        <div class="question-header">
+                            <div class="row align-items-center">
+                                <div class="col-md-8">
+                                    <h6 class="mb-1">
+                                        Question {{ forloop.counter }}
+                                        {% if answer.is_correct %}
+                                        <i class="fas fa-check-circle text-success ms-2"></i>
+                                        {% elif answer.answer_data %}
+                                        <i class="fas fa-times-circle text-danger ms-2"></i>
+                                        {% else %}
+                                        <i class="fas fa-minus-circle text-muted ms-2"></i>
+                                        {% endif %}
+                                    </h6>
+                                    <div class="text-muted small">{{ question.question_text|truncatechars:80 }}</div>
+                                </div>
+                                <div class="col-md-4 text-md-end">
+                                    <span class="badge bg-primary">{{ question.points }} pts</span>
+                                    {% if answer.is_correct %}
+                                    <span class="badge bg-success">{{ question.points }} obtenus</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">0 obtenu</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="question-body">
+                            <div class="fw-bold mb-3">{{ question.question_text }}</div>
+                            
+                            {% if question.image %}
+                            <img src="{{ question.image.url }}" alt="Question image" 
+                                 class="img-fluid rounded mb-3" style="max-height: 200px;">
+                            {% endif %}
+
+                            {% if question.question_type in 'multiple_choice,single_choice,true_false' %}
+                            <!-- Affichage des choix -->
+                            <div class="choices-review">
+                                {% for choice_data in result_data.choices %}
+                                {% with choice=choice_data.choice %}
+                                <div class="choice-result 
+                                    {% if choice_data.user_selected and choice_data.is_correct %}user-selected correct-answer
+                                    {% elif choice_data.user_selected %}user-selected{% if not choice_data.is_correct %} incorrect{% endif %}
+                                    {% elif choice_data.is_correct %}correct-answer{% endif %}">
+                                    
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="flex-grow-1">
+                                            {{ choice.choice_text }}
+                                        </div>
+                                        <div class="d-flex gap-2">
+                                            {% if choice_data.user_selected %}
+                                            <span class="badge bg-info">Votre choix</span>
+                                            {% endif %}
+                                            {% if choice_data.is_correct %}
+                                            <span class="badge bg-success">Correct</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    
+                                    {% if choice.explanation and choice_data.user_selected %}
+                                    <div class="small text-muted mt-2">
+                                        <i class="fas fa-info-circle me-1"></i>{{ choice.explanation }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% endwith %}
+                                {% endfor %}
+                            </div>
+                            
+                            {% else %}
+                            <!-- Réponses textuelles -->
+                            {% if answer.answer_data %}
+                            <div class="user-answer">
+                                <strong>Votre réponse:</strong> {{ result_data.user_answer_text }}
+                            </div>
+                            {% else %}
+                            <div class="user-answer">
+                                <strong>Non répondu</strong>
+                            </div>
+                            {% endif %}
+                            
+                            {% if question.question_type == 'short_answer' and question.correct_text %}
+                            <div class="correct-answer">
+                                <strong>Réponses acceptées:</strong><br>
+                                {% for line in question.correct_text|linebreaks %}
+                                {{ line }}
+                                {% endfor %}
+                            </div>
+                            {% elif question.question_type == 'numerical' and question.correct_number is not None %}
+                            <div class="correct-answer">
+                                <strong>Réponse correcte:</strong> {{ question.correct_number }}
+                                {% if question.tolerance %}(± {{ question.tolerance }}){% endif %}
+                            </div>
+                            {% endif %}
+                            {% endif %}
+
+                            {% if question.explanation %}
+                            <div class="alert alert-info mt-3">
+                                <h6 class="alert-heading">
+                                    <i class="fas fa-lightbulb me-2"></i>Explication
+                                </h6>
+                                {{ question.explanation|linebreaks }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endwith %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Historique des tentatives -->
+            {% if user_attempts.count > 1 %}
+            <div class="comparison-chart">
+                <h5 class="mb-3">
+                    <i class="fas fa-chart-line me-2"></i>
+                    Évolution de vos Performances
+                </h5>
+                
+                <div class="attempt-timeline">
+                    {% for prev_attempt in user_attempts %}
+                    <div class="attempt-item {% if prev_attempt.id == attempt.id %}current{% endif %}">
+                        <div class="row align-items-center">
+                            <div class="col-md-3">
+                                <div class="fw-bold">Tentative {{ prev_attempt.attempt_number }}</div>
+                                <div class="small text-muted">{{ prev_attempt.started_at|date:"d/m/Y H:i" }}</div>
+                            </div>
+                            
+                            <div class="col-md-3">
+                                <div class="text-center">
+                                    {% if prev_attempt.score is not None %}
+                                    <div class="h5 mb-0 text-{% if prev_attempt.passed %}success{% else %}danger{% endif %}">
+                                        {{ prev_attempt.score|floatformat:1 }}%
+                                    </div>
+                                    {% else %}
+                                    <span class="text-muted">Non terminé</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="progress-comparison">
+                                    {% if prev_attempt.score is not None %}
+                                    <div class="progress-fill bg-{% if prev_attempt.passed %}success{% else %}danger{% endif %}" 
+                                         style="width: {{ prev_attempt.score }}%"></div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-2 text-end">
+                                {% if prev_attempt.id == attempt.id %}
+                                <span class="badge bg-primary">Actuel</span>
+                                {% elif prev_attempt.passed %}
+                                <i class="fas fa-check-circle text-success"></i>
+                                {% else %}
+                                <i class="fas fa-times-circle text-danger"></i>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Sidebar Actions -->
+        <div class="col-lg-4">
+            <div class="action-buttons">
+                <h6 class="mb-3">
+                    <i class="fas fa-tools me-2"></i>Actions
+                </h6>
+                
+                <div class="d-grid gap-2">
+                    {% if show_corrections %}
+                    <a href="{% url 'quiz:student_quiz_review' attempt.id %}" 
+                       class="btn btn-primary">
+                        <i class="fas fa-search me-2"></i>Révision Détaillée
+                    </a>
+                    {% endif %}
+                    
+                    {% if can_retake %}
+                    <button class="btn btn-success" onclick="retakeQuiz()">
+                        <i class="fas fa-redo me-2"></i>Nouvelle Tentative
+                    </button>
+                    {% endif %}
+                    
+                    <a href="{% url 'quiz:student_quiz_detail' quiz.id %}" 
+                       class="btn btn-outline-primary">
+                        <i class="fas fa-info-circle me-2"></i>Détails du Quiz
+                    </a>
+                    
+                    <a href="{{ quiz.course.get_absolute_url }}" 
+                       class="btn btn-outline-secondary">
+                        <i class="fas fa-book me-2"></i>Retour au Cours
+                    </a>
+                    
+                    <button class="btn btn-outline-info" onclick="window.print()">
+                        <i class="fas fa-print me-2"></i>Imprimer
+                    </button>
+                </div>
+            </div>
+
+            <!-- Conseils d'amélioration -->
+            {% if not attempt.passed %}
+            <div class="card mt-4">
+                <div class="card-header bg-warning text-dark">
+                    <h6 class="mb-0">
+                        <i class="fas fa-lightbulb me-2"></i>Conseils d'Amélioration
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <ul class="mb-0 small">
+                        <li>Revoyez les concepts abordés dans le cours</li>
+                        <li>Relisez les explications des bonnes réponses</li>
+                        <li>Prenez plus de temps pour analyser chaque question</li>
+                        {% if quiz.lesson %}
+                        <li>Consultez à nouveau la leçon associée</li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Informations du quiz -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-info me-2"></i>Informations
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="small">
+                        <div class="mb-2">
+                            <strong>Quiz:</strong> {{ quiz.title }}
+                        </div>
+                        <div class="mb-2">
+                            <strong>Cours:</strong> {{ quiz.course.title }}
+                        </div>
+                        <div class="mb-2">
+                            <strong>Instructeur:</strong> {{ quiz.instructor.get_full_name|default:quiz.instructor.username }}
+                        </div>
+                        <div class="mb-2">
+                            <strong>Date:</strong> {{ attempt.started_at|date:"d/m/Y H:i" }}
+                        </div>
+                        {% if attempt.time_taken %}
+                        <div class="mb-2">
+                            <strong>Durée:</strong> {{ attempt.time_taken.total_seconds|floatformat:0 }} secondes
+                        </div>
+                        {% endif %}
+                        <div>
+                            <strong>Statut:</strong> 
+                            <span class="badge bg-{% if attempt.passed %}success{% else %}danger{% endif %}">
+                                {% if attempt.passed %}Réussi{% else %}Échoué{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function retakeQuiz() {
+    if (confirm('Êtes-vous sûr de vouloir refaire ce quiz ? Cela créera une nouvelle tentative.')) {
+        window.location.href = "{% url 'quiz:student_quiz_detail' quiz.id %}";
+    }
+}
+
+// Animation des barres de progression au chargement
+document.addEventListener('DOMContentLoaded', function() {
+    const progressBars = document.querySelectorAll('.progress-fill');
+    progressBars.forEach(bar => {
+        const width = bar.style.width;
+        bar.style.width = '0%';
+        setTimeout(() => {
+            bar.style.width = width;
+        }, 500);
+    });
+});
+</script>
+{% endblock %}

@@ -172,6 +172,18 @@ class Quiz(models.Model):
             return False, f"Limite de {self.max_attempts} tentative(s) atteinte"
         
         return True, "Quiz disponible"
+    
+    def is_available_for_student(self, user):
+        """Vérifie si un étudiant a accès à ce quiz"""
+        # Vérifier que l'étudiant est inscrit au cours
+        if not user.enrolled_courses.filter(id=self.course.id).exists():
+            return False
+        
+        # Vérifier que le quiz est publié et disponible
+        if not self.is_published or not self.is_available():
+            return False
+        
+        return True
 
 
 class Question(models.Model):

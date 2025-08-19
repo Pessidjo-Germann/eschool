@@ -1,0 +1,546 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ quiz.title }} - {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.quiz-hero {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 3rem 0;
+    position: relative;
+    overflow: hidden;
+}
+.quiz-hero::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 100" fill="rgba(255,255,255,0.1)"><polygon points="1000,100 1000,0 0,100"/></svg>');
+    background-size: cover;
+}
+.quiz-content {
+    position: relative;
+    z-index: 2;
+}
+.info-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    border: 1px solid #e9ecef;
+    height: 100%;
+}
+.attempt-card {
+    border-left: 4px solid #007bff;
+    transition: transform 0.2s;
+}
+.attempt-card:hover {
+    transform: translateX(5px);
+}
+.attempt-card.passed {
+    border-left-color: #28a745;
+}
+.attempt-card.failed {
+    border-left-color: #dc3545;
+}
+.attempt-card.in-progress {
+    border-left-color: #ffc107;
+}
+.quiz-instructions {
+    background-color: #e7f3ff;
+    border: 1px solid #b8daff;
+    border-radius: 8px;
+    padding: 1.5rem;
+}
+.requirements-list {
+    background-color: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 8px;
+    padding: 1.5rem;
+}
+.start-quiz-section {
+    background: linear-gradient(45deg, #28a745, #20c997);
+    color: white;
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    position: sticky;
+    top: 1rem;
+}
+.timer-badge {
+    background-color: #dc3545;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-family: monospace;
+    font-weight: bold;
+}
+.score-badge {
+    font-size: 1.2em;
+    font-weight: bold;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+}
+.stats-row {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 1rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="quiz-hero">
+    <div class="container quiz-content">
+        <div class="row align-items-center">
+            <div class="col-lg-8">
+                <nav aria-label="breadcrumb" class="mb-3">
+                    <ol class="breadcrumb text-white-50">
+                        <li class="breadcrumb-item">
+                            <a href="{% url 'quiz:student_quiz_list' %}" class="text-white">Mes Quiz</a>
+                        </li>
+                        <li class="breadcrumb-item active text-white" aria-current="page">
+                            {{ quiz.title }}
+                        </li>
+                    </ol>
+                </nav>
+
+                <h1 class="display-5 fw-bold mb-3">{{ quiz.title }}</h1>
+                
+                {% if quiz.description %}
+                <p class="lead mb-4 opacity-75">{{ quiz.description }}</p>
+                {% endif %}
+
+                <div class="d-flex flex-wrap gap-3">
+                    <span class="badge bg-light text-dark fs-6">
+                        <i class="fas fa-book me-2"></i>{{ quiz.course.title }}
+                    </span>
+                    
+                    {% if quiz.lesson %}
+                    <span class="badge bg-light text-dark fs-6">
+                        <i class="fas fa-play me-2"></i>{{ quiz.lesson.title }}
+                    </span>
+                    {% endif %}
+                    
+                    <span class="badge bg-light text-dark fs-6">
+                        <i class="fas fa-user me-2"></i>{{ quiz.instructor.get_full_name|default:quiz.instructor.username }}
+                    </span>
+                </div>
+            </div>
+            
+            <div class="col-lg-4 text-lg-end mt-4 mt-lg-0">
+                <div class="text-center">
+                    <div class="display-4 fw-bold mb-2">{{ questions_count }}</div>
+                    <div class="fs-5 opacity-75">Questions</div>
+                    
+                    <div class="mt-3">
+                        <div class="h4 mb-1">{{ total_points }} points</div>
+                        <div class="opacity-75">Total possible</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container mt-4">
+    <div class="row">
+        <!-- Contenu Principal -->
+        <div class="col-lg-8">
+            <!-- Informations du Quiz -->
+            <div class="row mb-4">
+                <div class="col-md-3 mb-3">
+                    <div class="info-card text-center">
+                        <i class="fas fa-clipboard-list fa-2x text-primary mb-2"></i>
+                        <div class="fw-bold">{{ quiz.get_quiz_type_display }}</div>
+                        <div class="small text-muted">Type</div>
+                    </div>
+                </div>
+                
+                <div class="col-md-3 mb-3">
+                    <div class="info-card text-center">
+                        <i class="fas fa-star fa-2x text-warning mb-2"></i>
+                        <div class="fw-bold">{{ quiz.get_difficulty_display|default:"Non définie" }}</div>
+                        <div class="small text-muted">Difficulté</div>
+                    </div>
+                </div>
+                
+                <div class="col-md-3 mb-3">
+                    <div class="info-card text-center">
+                        <i class="fas fa-clock fa-2x text-info mb-2"></i>
+                        <div class="fw-bold">
+                            {% if quiz.time_limit %}{{ quiz.time_limit }} min{% else %}Illimité{% endif %}
+                        </div>
+                        <div class="small text-muted">Durée</div>
+                    </div>
+                </div>
+                
+                <div class="col-md-3 mb-3">
+                    <div class="info-card text-center">
+                        <i class="fas fa-redo fa-2x text-success mb-2"></i>
+                        <div class="fw-bold">{{ quiz.max_attempts }}</div>
+                        <div class="small text-muted">Tentatives max</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Instructions -->
+            <div class="quiz-instructions mb-4">
+                <h5 class="text-primary mb-3">
+                    <i class="fas fa-info-circle me-2"></i>Instructions
+                </h5>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <ul class="list-unstyled mb-0">
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                Lisez attentivement chaque question
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                Vos réponses sont sauvegardées automatiquement
+                            </li>
+                            <li class="mb-2">
+                                <i class="fas fa-check-circle text-success me-2"></i>
+                                Score de passage: <strong>{{ quiz.passing_score }}%</strong>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <ul class="list-unstyled mb-0">
+                            {% if quiz.time_limit %}
+                            <li class="mb-2">
+                                <i class="fas fa-clock text-warning me-2"></i>
+                                Temps limité à {{ quiz.time_limit }} minutes
+                            </li>
+                            {% endif %}
+                            
+                            {% if quiz.randomize_questions %}
+                            <li class="mb-2">
+                                <i class="fas fa-random text-info me-2"></i>
+                                Questions dans un ordre aléatoire
+                            </li>
+                            {% endif %}
+                            
+                            {% if quiz.show_correct_answers %}
+                            <li class="mb-2">
+                                <i class="fas fa-eye text-primary me-2"></i>
+                                Corrections affichées après soumission
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Historique des tentatives -->
+            {% if attempts %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-history me-2"></i>
+                        Mes Tentatives ({{ attempts.count }}/{{ quiz.max_attempts }})
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% for attempt in attempts %}
+                    <div class="attempt-card card mb-3 {% if attempt.passed %}passed{% elif attempt.score is not None %}failed{% elif attempt.status == 'in_progress' %}in-progress{% endif %}">
+                        <div class="card-body">
+                            <div class="row align-items-center">
+                                <div class="col-md-2">
+                                    <div class="text-center">
+                                        <div class="fw-bold">Tentative {{ attempt.attempt_number }}</div>
+                                        <div class="small text-muted">{{ attempt.started_at|date:"d/m/Y" }}</div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-3">
+                                    <div class="text-center">
+                                        {% if attempt.score is not None %}
+                                        <div class="score-badge bg-{% if attempt.passed %}success{% else %}danger{% endif %}">
+                                            {{ attempt.score|floatformat:1 }}%
+                                        </div>
+                                        {% else %}
+                                        <span class="badge bg-{% if attempt.status == 'in_progress' %}warning{% else %}secondary{% endif %}">
+                                            {{ attempt.get_status_display }}
+                                        </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4">
+                                    <div class="small text-muted">
+                                        <div>
+                                            <i class="fas fa-calendar me-1"></i>
+                                            {{ attempt.started_at|date:"d/m/Y H:i" }}
+                                        </div>
+                                        {% if attempt.time_taken %}
+                                        <div>
+                                            <i class="fas fa-stopwatch me-1"></i>
+                                            Durée: {{ attempt.time_taken.total_seconds|floatformat:0 }}s
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-3 text-end">
+                                    {% if attempt.status == 'in_progress' %}
+                                    <button class="btn btn-warning btn-sm" 
+                                            onclick="resumeQuiz('{{ attempt.id }}')">
+                                        <i class="fas fa-play me-1"></i>Continuer
+                                    </button>
+                                    {% elif attempt.status in 'submitted,graded' %}
+                                    <a href="{% url 'quiz:student_quiz_results' attempt.id %}" 
+                                       class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-chart-bar me-1"></i>Résultats
+                                    </a>
+                                    {% if quiz.show_correct_answers %}
+                                    <a href="{% url 'quiz:student_quiz_review' attempt.id %}" 
+                                       class="btn btn-outline-info btn-sm">
+                                        <i class="fas fa-search me-1"></i>Révision
+                                    </a>
+                                    {% endif %}
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Exigences et préparation -->
+            {% if quiz.time_limit or quiz.max_attempts < 5 %}
+            <div class="requirements-list">
+                <h6 class="text-warning mb-3">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Avant de commencer
+                </h6>
+                
+                <ul class="mb-0">
+                    {% if quiz.time_limit %}
+                    <li class="mb-2">
+                        Assurez-vous d'avoir {{ quiz.time_limit }} minutes disponibles sans interruption
+                    </li>
+                    <li class="mb-2">
+                        Préparez vos notes et matériels de référence si autorisés
+                    </li>
+                    {% endif %}
+                    
+                    {% if quiz.max_attempts <= 3 %}
+                    <li class="mb-2">
+                        <strong>Attention:</strong> Vous n'avez que {{ quiz.max_attempts }} tentative{{ quiz.max_attempts|pluralize }} pour ce quiz
+                    </li>
+                    {% endif %}
+                    
+                    <li>
+                        Vérifiez votre connexion internet pour éviter les interruptions
+                    </li>
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Sidebar Actions -->
+        <div class="col-lg-4">
+            <!-- Statistiques générales -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-chart-line me-2"></i>Statistiques Générales
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="stats-row">
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <div class="fw-bold text-primary h4">{{ total_attempts }}</div>
+                                <div class="small text-muted">Tentatives totales</div>
+                            </div>
+                            <div class="col-4">
+                                <div class="fw-bold text-success h4">{{ average_score|floatformat:1 }}%</div>
+                                <div class="small text-muted">Score moyen</div>
+                            </div>
+                            <div class="col-4">
+                                <div class="fw-bold text-info h4">{{ quiz.passing_score }}%</div>
+                                <div class="small text-muted">Seuil requis</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action principale -->
+            <div class="start-quiz-section">
+                {% if has_active_attempt %}
+                <div class="mb-3">
+                    <i class="fas fa-play-circle fa-3x mb-3"></i>
+                    <h4>Quiz en cours</h4>
+                    <p class="mb-0">Vous avez une tentative en cours.</p>
+                </div>
+                
+                <div class="d-grid gap-2">
+                    <button class="btn btn-light btn-lg" 
+                            onclick="resumeQuiz('{{ attempts.0.id }}')">
+                        <i class="fas fa-play me-2"></i>Continuer le quiz
+                    </button>
+                </div>
+                
+                {% elif can_attempt %}
+                <div class="mb-3">
+                    <i class="fas fa-rocket fa-3x mb-3"></i>
+                    <h4>Prêt à commencer ?</h4>
+                    <p class="mb-0">
+                        {% if attempts.count > 0 %}
+                        Tentative {{ attempts.count|add:"1" }} sur {{ quiz.max_attempts }}
+                        {% else %}
+                        Première tentative
+                        {% endif %}
+                    </p>
+                </div>
+                
+                <div class="d-grid gap-2">
+                    <button class="btn btn-light btn-lg" 
+                            onclick="startQuiz('{{ quiz.id }}')">
+                        <i class="fas fa-play me-2"></i>
+                        {% if attempts.count > 0 %}Nouvelle tentative{% else %}Commencer le quiz{% endif %}
+                    </button>
+                    
+                    {% if quiz.time_limit %}
+                    <div class="timer-badge mt-2">
+                        <i class="fas fa-clock me-2"></i>{{ quiz.time_limit }} minutes
+                    </div>
+                    {% endif %}
+                </div>
+                
+                {% else %}
+                <div class="mb-3">
+                    <i class="fas fa-ban fa-3x mb-3"></i>
+                    <h4>Quiz terminé</h4>
+                    <p class="mb-0">
+                        Vous avez utilisé toutes vos tentatives ({{ quiz.max_attempts }}).
+                    </p>
+                </div>
+                
+                {% if attempts.0.status in 'submitted,graded' %}
+                <div class="d-grid gap-2">
+                    <a href="{% url 'quiz:student_quiz_results' attempts.0.id %}" 
+                       class="btn btn-light">
+                        <i class="fas fa-chart-bar me-2"></i>Voir mes résultats
+                    </a>
+                    
+                    {% if quiz.show_correct_answers %}
+                    <a href="{% url 'quiz:student_quiz_review' attempts.0.id %}" 
+                       class="btn btn-outline-light">
+                        <i class="fas fa-search me-2"></i>Révision détaillée
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+                {% endif %}
+            </div>
+
+            <!-- Liens utiles -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-link me-2"></i>Liens Utiles
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ quiz.course.get_absolute_url }}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-book me-2"></i>Retour au cours
+                        </a>
+                        
+                        {% if quiz.lesson %}
+                        <a href="{{ quiz.lesson.get_absolute_url }}" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-play me-2"></i>Voir la leçon
+                        </a>
+                        {% endif %}
+                        
+                        <a href="{% url 'quiz:student_quiz_list' %}" class="btn btn-outline-info btn-sm">
+                            <i class="fas fa-list me-2"></i>Tous mes quiz
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Fonctions pour démarrer et reprendre les quiz
+function startQuiz(quizId) {
+    const confirmMessage = {% if quiz.time_limit %}'Ce quiz a une limite de temps de {{ quiz.time_limit }} minutes. Êtes-vous prêt à commencer ?'{% else %}'Êtes-vous prêt à commencer ce quiz ?'{% endif %};
+    
+    if (confirm(confirmMessage)) {
+        fetch(`{% url 'quiz:student_quiz_start' quiz.id %}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                window.location.href = data.redirect_url;
+            } else {
+                alert('Erreur: ' + (data.error || 'Impossible de démarrer le quiz'));
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Erreur de connexion');
+        });
+    }
+}
+
+function resumeQuiz(attemptId) {
+    fetch(`{% url 'quiz:student_quiz_resume' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', attemptId), {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.href = data.redirect_url;
+        } else {
+            alert('Erreur: ' + (data.error || 'Impossible de reprendre le quiz'));
+        }
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        alert('Erreur de connexion');
+    });
+}
+
+// Fonction utilitaire pour récupérer le token CSRF
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}

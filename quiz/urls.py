@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from . import views, instructor_views
+from . import views, instructor_views, student_views
 
 app_name = 'quiz'
 
@@ -37,5 +37,23 @@ urlpatterns = [
         path('ajax/questions/', instructor_views.get_questions_by_quiz, name='ajax_questions'),
         path('<uuid:quiz_pk>/ajax/reorder/', instructor_views.reorder_questions, name='ajax_reorder_questions'),
         path('<uuid:quiz_pk>/question/<uuid:pk>/ajax/edit/', instructor_views.question_quick_edit, name='ajax_question_edit'),
+    ])),
+    
+    # Interface Web Étudiant
+    path('student/', include([
+        # Gestion des quiz pour étudiants
+        path('', student_views.quiz_list, name='student_quiz_list'),
+        path('<uuid:quiz_id>/', student_views.quiz_detail, name='student_quiz_detail'),
+        path('<uuid:quiz_id>/start/', student_views.quiz_start, name='student_quiz_start'),
+        
+        # Passage du quiz
+        path('attempt/<uuid:attempt_id>/', student_views.quiz_take, name='student_quiz_take'),
+        path('attempt/<uuid:attempt_id>/save/', student_views.quiz_save_answer, name='student_quiz_save'),
+        path('attempt/<uuid:attempt_id>/submit/', student_views.quiz_submit, name='student_quiz_submit'),
+        path('attempt/<uuid:attempt_id>/resume/', student_views.quiz_resume, name='student_quiz_resume'),
+        
+        # Résultats et révision
+        path('attempt/<uuid:attempt_id>/results/', student_views.quiz_results, name='student_quiz_results'),
+        path('attempt/<uuid:attempt_id>/review/', student_views.quiz_review, name='student_quiz_review'),
     ])),
 ]

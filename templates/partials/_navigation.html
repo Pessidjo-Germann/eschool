@@ -65,17 +65,23 @@
                             </ul>
                         </li>
                     {% elif user.is_student %}
-                         <li class="nav-item">
-                            <a class="nav-link modern-link" href="{% url 'courses:my_courses' %}">
+                        <li class="nav-item dropdown">
+                            <a class="nav-link modern-link dropdown-toggle" href="{% url 'courses:my_courses' %}" id="studentMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="bi bi-book me-1"></i>
                                 Mes cours
                             </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link modern-link" href="{% url 'courses:my_favorites' %}">
-                                <i class="bi bi-heart me-1"></i>
-                                Mes favoris
-                            </a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{% url 'courses:my_courses' %}">
+                                    <i class="bi bi-book me-2"></i>Cours inscrits
+                                </a></li>
+                                <li><a class="dropdown-item" href="{% url 'courses:my_favorites' %}">
+                                    <i class="bi bi-heart me-2"></i>Mes favoris
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{% url 'quiz:student_quiz_list' %}">
+                                    <i class="bi bi-clipboard-check me-2"></i>Mes quiz
+                                </a></li>
+                            </ul>
                         </li>
                     {% endif %}
                 {% endif %}
