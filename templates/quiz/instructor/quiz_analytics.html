@@ -1,0 +1,561 @@
+{% extends 'instructor/base.html' %}
+{% load static %}
+
+{% block title %}Analytics - {{ quiz.title }} - {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.analytics-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+}
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+.stat-card {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    border-left: 4px solid;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+.stat-card.primary { border-left-color: #007bff; }
+.stat-card.success { border-left-color: #28a745; }
+.stat-card.warning { border-left-color: #ffc107; }
+.stat-card.info { border-left-color: #17a2b8; }
+.stat-card.danger { border-left-color: #dc3545; }
+
+.chart-container {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    border: 1px solid #e9ecef;
+    margin-bottom: 1.5rem;
+}
+.question-analysis {
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    margin-bottom: 1rem;
+    overflow: hidden;
+}
+.question-header {
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-bottom: 1px solid #e9ecef;
+}
+.question-stats {
+    padding: 1rem;
+}
+.success-rate-bar {
+    height: 20px;
+    background-color: #e9ecef;
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+}
+.success-rate-fill {
+    height: 100%;
+    border-radius: 10px;
+    transition: width 0.5s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8em;
+    font-weight: bold;
+    color: white;
+}
+.filters-card {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    border: 1px solid #e9ecef;
+    position: sticky;
+    top: 1rem;
+}
+.attempts-table {
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #e9ecef;
+}
+.score-distribution {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+    gap: 0.5rem;
+    margin: 1rem 0;
+}
+.score-range {
+    text-align: center;
+    padding: 0.5rem;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
+}
+.score-range.has-values {
+    background-color: #e3f2fd;
+    border-color: #2196f3;
+    font-weight: bold;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{% url 'instructor:dashboard' %}">Dashboard</a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'quiz:quiz_list' %}">Quiz</a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'quiz:quiz_detail' quiz.pk %}">{{ quiz.title }}</a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">Analytics</li>
+        </ol>
+    </nav>
+
+    <!-- Header -->
+    <div class="analytics-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-2">
+                    <i class="fas fa-chart-bar me-3"></i>Analytics du Quiz
+                </h1>
+                <h4 class="mb-0 opacity-75">{{ quiz.title }}</h4>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <div class="btn-group" role="group">
+                    <a href="{% url 'quiz:quiz_detail' quiz.pk %}" class="btn btn-light">
+                        <i class="fas fa-arrow-left me-2"></i>Retour
+                    </a>
+                    <button class="btn btn-light" onclick="window.print()">
+                        <i class="fas fa-print me-2"></i>Imprimer
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-9">
+            <!-- Statistiques générales -->
+            <div class="stats-grid">
+                <div class="stat-card primary">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-muted small">Total Tentatives</div>
+                            <div class="h3 mb-0">{{ stats.total_attempts }}</div>
+                        </div>
+                        <i class="fas fa-play-circle fa-2x text-primary opacity-50"></i>
+                    </div>
+                </div>
+
+                <div class="stat-card info">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-muted small">Utilisateurs Uniques</div>
+                            <div class="h3 mb-0">{{ stats.unique_users }}</div>
+                        </div>
+                        <i class="fas fa-users fa-2x text-info opacity-50"></i>
+                    </div>
+                </div>
+
+                <div class="stat-card success">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-muted small">Score Moyen</div>
+                            <div class="h3 mb-0">{{ stats.average_score|floatformat:1 }}%</div>
+                        </div>
+                        <i class="fas fa-chart-line fa-2x text-success opacity-50"></i>
+                    </div>
+                </div>
+
+                <div class="stat-card warning">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-muted small">Score Médian</div>
+                            <div class="h3 mb-0">{{ stats.median_score|floatformat:1 }}%</div>
+                        </div>
+                        <i class="fas fa-chart-area fa-2x text-warning opacity-50"></i>
+                    </div>
+                </div>
+
+                <div class="stat-card {% if stats.pass_rate >= 70 %}success{% elif stats.pass_rate >= 50 %}warning{% else %}danger{% endif %}">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-muted small">Taux de Réussite</div>
+                            <div class="h3 mb-0">{{ stats.pass_rate|floatformat:1 }}%</div>
+                        </div>
+                        <i class="fas fa-trophy fa-2x opacity-50"></i>
+                    </div>
+                </div>
+
+                {% if stats.average_time %}
+                <div class="stat-card info">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="text-muted small">Temps Moyen</div>
+                            <div class="h3 mb-0">{{ stats.average_time|floatformat:0 }}s</div>
+                        </div>
+                        <i class="fas fa-clock fa-2x text-info opacity-50"></i>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Distribution des scores -->
+            {% if stats.score_distribution %}
+            <div class="chart-container">
+                <h5 class="text-primary mb-3">
+                    <i class="fas fa-chart-bar me-2"></i>Distribution des Scores
+                </h5>
+                <div class="score-distribution">
+                    {% for range, count in stats.score_distribution.items %}
+                    <div class="score-range {% if count > 0 %}has-values{% endif %}">
+                        <div class="small text-muted">{{ range }}%</div>
+                        <div class="fw-bold">{{ count }}</div>
+                    </div>
+                    {% empty %}
+                    <div class="text-muted text-center">Aucune donnée disponible</div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Analyse par question -->
+            <div class="chart-container">
+                <h5 class="text-primary mb-4">
+                    <i class="fas fa-question-circle me-2"></i>Analyse par Question
+                </h5>
+
+                {% if stats.question_stats %}
+                {% for question_stat in stats.question_stats %}
+                <div class="question-analysis">
+                    <div class="question-header">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h6 class="mb-1">Question {{ forloop.counter }}</h6>
+                                <p class="mb-0 text-muted">{{ question_stat.question.question_text|truncatechars:80 }}</p>
+                            </div>
+                            <div class="col-md-4 text-md-end">
+                                <span class="badge bg-primary me-2">{{ question_stat.question.points }} pts</span>
+                                <span class="badge bg-{% if question_stat.difficulty_level == 'Facile' %}success{% elif question_stat.difficulty_level == 'Moyenne' %}warning{% else %}danger{% endif %}">
+                                    {{ question_stat.difficulty_level }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="question-stats">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="mb-2">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <span class="small text-muted">Taux de Réussite</span>
+                                        <span class="fw-bold">{{ question_stat.success_rate }}%</span>
+                                    </div>
+                                    <div class="success-rate-bar">
+                                        <div class="success-rate-fill bg-{% if question_stat.success_rate >= 80 %}success{% elif question_stat.success_rate >= 60 %}warning{% else %}danger{% endif %}" 
+                                             style="width: {{ question_stat.success_rate }}%">
+                                            {% if question_stat.success_rate > 15 %}{{ question_stat.success_rate }}%{% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-center">
+                                    <div class="fw-bold h5 mb-0">{{ question_stat.total_responses }}</div>
+                                    <div class="small text-muted">Réponses</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Recommandations -->
+                        {% if question_stat.success_rate < 50 %}
+                        <div class="alert alert-warning alert-sm mt-3">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Recommandation:</strong> Cette question semble difficile. 
+                            Vérifiez si l'énoncé est clair ou si les distracteurs ne sont pas trop proches de la bonne réponse.
+                        </div>
+                        {% elif question_stat.success_rate > 95 %}
+                        <div class="alert alert-info alert-sm mt-3">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Recommandation:</strong> Cette question est très facile. 
+                            Vous pourriez envisager d'ajouter des distracteurs plus subtils.
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-chart-line fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">Aucune donnée disponible</h5>
+                    <p class="text-muted">Les analytics apparaîtront après que les étudiants aient commencé à passer le quiz.</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Tentatives récentes -->
+            <div class="attempts-table">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>Étudiant</th>
+                                <th>Date</th>
+                                <th>Score</th>
+                                <th>Temps</th>
+                                <th>Statut</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for attempt in recent_attempts %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="me-3">
+                                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" 
+                                                 style="width: 36px; height: 36px; font-size: 0.9em;">
+                                                {{ attempt.user.get_full_name|default:attempt.user.username|first|upper }}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div class="fw-bold">{{ attempt.user.get_full_name|default:attempt.user.username }}</div>
+                                            <div class="small text-muted">{{ attempt.user.email }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>{{ attempt.started_at|date:"d/m/Y H:i" }}</div>
+                                    <div class="small text-muted">{{ attempt.started_at|timesince }} ago</div>
+                                </td>
+                                <td>
+                                    {% if attempt.score is not None %}
+                                    <div class="d-flex align-items-center">
+                                        <div class="me-2">
+                                            <strong class="text-{% if attempt.passed %}success{% else %}danger{% endif %}">
+                                                {{ attempt.score|floatformat:1 }}%
+                                            </strong>
+                                        </div>
+                                        {% if attempt.passed %}
+                                        <i class="fas fa-check-circle text-success"></i>
+                                        {% else %}
+                                        <i class="fas fa-times-circle text-danger"></i>
+                                        {% endif %}
+                                    </div>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if attempt.time_taken %}
+                                    {{ attempt.time_taken.total_seconds|floatformat:0 }}s
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-{% if attempt.status == 'submitted' %}success{% elif attempt.status == 'graded' %}info{% elif attempt.status == 'expired' %}warning{% else %}secondary{% endif %}">
+                                        {{ attempt.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <button class="btn btn-outline-primary btn-sm" 
+                                                onclick="viewAttemptDetails('{{ attempt.id }}')"
+                                                title="Voir détails">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        {% if attempt.status == 'submitted' %}
+                                        <button class="btn btn-outline-warning btn-sm"
+                                                onclick="gradeAttempt('{{ attempt.id }}')"
+                                                title="Noter manuellement">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center py-4">
+                                    <i class="fas fa-inbox fa-2x text-muted mb-2"></i>
+                                    <div class="text-muted">Aucune tentative enregistrée</div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3">
+            <!-- Filtres -->
+            <div class="filters-card">
+                <h6 class="text-primary mb-3">
+                    <i class="fas fa-filter me-2"></i>Filtres
+                </h6>
+
+                <form method="get">
+                    <div class="mb-3">
+                        <label for="{{ form.date_from.id_for_label }}" class="form-label">Du</label>
+                        {{ form.date_from }}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.date_to.id_for_label }}" class="form-label">Au</label>
+                        {{ form.date_to }}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.status.id_for_label }}" class="form-label">Statut</label>
+                        {{ form.status }}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.passed.id_for_label }}" class="form-label">Résultat</label>
+                        {{ form.passed }}
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-sm">
+                            <i class="fas fa-search me-2"></i>Appliquer
+                        </button>
+                        <a href="{% url 'quiz:quiz_analytics' quiz.pk %}" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-times me-2"></i>Effacer
+                        </a>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Actions rapides -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-bolt me-2"></i>Actions Rapides
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'quiz:quiz_detail' quiz.pk %}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-eye me-2"></i>Voir le Quiz
+                        </a>
+                        
+                        <a href="{% url 'quiz:quiz_edit' quiz.pk %}" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-edit me-2"></i>Modifier
+                        </a>
+                        
+                        <button class="btn btn-outline-info btn-sm" onclick="exportData()">
+                            <i class="fas fa-download me-2"></i>Exporter
+                        </button>
+                        
+                        <button class="btn btn-outline-success btn-sm" onclick="generateReport()">
+                            <i class="fas fa-file-pdf me-2"></i>Rapport PDF
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Conseil pédagogique -->
+            {% if stats.total_attempts > 0 %}
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-lightbulb me-2"></i>Conseils
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="small">
+                        {% if stats.pass_rate < 50 %}
+                        <div class="alert alert-warning alert-sm">
+                            <strong>Taux de réussite faible:</strong> Envisagez de réviser la difficulté ou de fournir plus de ressources d'apprentissage.
+                        </div>
+                        {% elif stats.pass_rate > 90 %}
+                        <div class="alert alert-info alert-sm">
+                            <strong>Taux de réussite élevé:</strong> Le quiz pourrait être trop facile. Considérez l'ajout de questions plus challenging.
+                        </div>
+                        {% endif %}
+
+                        {% if stats.average_time and quiz.time_limit %}
+                        {% with time_ratio=stats.average_time|div:quiz.time_limit|div:60 %}
+                        {% if time_ratio < 0.3 %}
+                        <div class="alert alert-info alert-sm">
+                            <strong>Temps court:</strong> Les étudiants finissent rapidement. Le quiz pourrait être trop court ou facile.
+                        </div>
+                        {% elif time_ratio > 0.8 %}
+                        <div class="alert alert-warning alert-sm">
+                            <strong>Temps serré:</strong> Les étudiants utilisent presque tout le temps alloué. Vérifiez si la durée est suffisante.
+                        </div>
+                        {% endif %}
+                        {% endwith %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Fonctions pour les actions
+    window.viewAttemptDetails = function(attemptId) {
+        // Dans une implémentation complète, ouvrir une modal avec les détails
+        alert(`Voir détails de la tentative ${attemptId}`);
+    };
+    
+    window.gradeAttempt = function(attemptId) {
+        // Dans une implémentation complète, ouvrir l'interface de notation
+        alert(`Noter la tentative ${attemptId}`);
+    };
+    
+    window.exportData = function() {
+        // Dans une implémentation complète, télécharger les données
+        alert('Export des données (CSV/Excel)');
+    };
+    
+    window.generateReport = function() {
+        // Dans une implémentation complète, générer un rapport PDF
+        alert('Génération du rapport PDF');
+    };
+    
+    // Animation des barres de progression
+    const progressBars = document.querySelectorAll('.success-rate-fill');
+    progressBars.forEach(bar => {
+        const width = bar.style.width;
+        bar.style.width = '0%';
+        setTimeout(() => {
+            bar.style.width = width;
+        }, 100);
+    });
+    
+    // Actualisation automatique (optionnelle)
+    const autoRefresh = false; // À activer si souhaité
+    if (autoRefresh) {
+        setInterval(() => {
+            window.location.reload();
+        }, 60000); // Actualiser toutes les minutes
+    }
+});
+</script>
+{% endblock %}

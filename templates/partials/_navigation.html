@@ -43,11 +43,26 @@
 
                 {% if user.is_authenticated %}
                     {% if user.is_instructor %}
-                        <li class="nav-item">
-                            <a class="nav-link modern-link" href="{% url 'instructor:courses' %}">
+                        <li class="nav-item dropdown">
+                            <a class="nav-link modern-link dropdown-toggle" href="{% url 'instructor:courses' %}" id="instructorMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                 <i class="bi bi-plus-circle me-1"></i>
                                 Mes créations
                             </a>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="{% url 'instructor:courses' %}">
+                                    <i class="bi bi-book me-2"></i>Mes cours
+                                </a></li>
+                                <li><a class="dropdown-item" href="{% url 'quiz:quiz_list' %}">
+                                    <i class="bi bi-clipboard-check me-2"></i>Mes quiz
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{% url 'instructor:course_create' %}">
+                                    <i class="bi bi-plus-circle me-2"></i>Nouveau cours
+                                </a></li>
+                                <li><a class="dropdown-item" href="{% url 'quiz:quiz_create' %}">
+                                    <i class="bi bi-clipboard-plus me-2"></i>Nouveau quiz
+                                </a></li>
+                            </ul>
                         </li>
                     {% elif user.is_student %}
                          <li class="nav-item">

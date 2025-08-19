@@ -1,0 +1,555 @@
+{% extends 'instructor/base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }} - {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.question-form {
+    background: white;
+    border-radius: 8px;
+    padding: 2rem;
+    border: 1px solid #e9ecef;
+}
+.form-section {
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #e9ecef;
+}
+.form-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+.question-type-help {
+    background-color: #f8f9fa;
+    border-radius: 6px;
+    padding: 1rem;
+    margin-top: 1rem;
+}
+.conditional-field {
+    display: none;
+}
+.conditional-field.show {
+    display: block;
+}
+.preview-area {
+    background-color: #f8f9fa;
+    border: 1px dashed #dee2e6;
+    border-radius: 6px;
+    padding: 1.5rem;
+    margin-top: 1rem;
+}
+.image-preview {
+    max-width: 200px;
+    max-height: 200px;
+    border-radius: 4px;
+    margin-top: 1rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{% url 'instructor:dashboard' %}">Dashboard</a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'quiz:quiz_list' %}">Quiz</a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'quiz:quiz_detail' quiz.pk %}">{{ quiz.title }}</a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">
+                {% if question %}Modifier question{% else %}Nouvelle question{% endif %}
+            </li>
+        </ol>
+    </nav>
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>
+                <i class="fas fa-{% if question %}edit{% else %}plus{% endif %} me-3 text-primary"></i>
+                {{ page_title }}
+            </h2>
+            <p class="text-muted mb-0">
+                Quiz: <strong>{{ quiz.title }}</strong>
+            </p>
+        </div>
+        <a href="{% url 'quiz:quiz_detail' quiz.pk %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Retour au quiz
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="question-form">
+                <form method="post" enctype="multipart/form-data" id="question-form">
+                    {% csrf_token %}
+                    
+                    <!-- Section: Informations de base -->
+                    <div class="form-section">
+                        <h5 class="text-primary mb-3">
+                            <i class="fas fa-info-circle me-2"></i>Informations de base
+                        </h5>
+                        
+                        <div class="row">
+                            <div class="col-md-8 mb-3">
+                                <label for="{{ form.question_type.id_for_label }}" class="form-label">
+                                    Type de question <span class="text-danger">*</span>
+                                </label>
+                                {{ form.question_type }}
+                                {% if form.question_type.errors %}
+                                    <div class="text-danger">{{ form.question_type.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-2 mb-3">
+                                <label for="{{ form.points.id_for_label }}" class="form-label">Points</label>
+                                {{ form.points }}
+                                {% if form.points.errors %}
+                                    <div class="text-danger">{{ form.points.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-2 mb-3">
+                                <label for="{{ form.order.id_for_label }}" class="form-label">Ordre</label>
+                                {{ form.order }}
+                                {% if form.order.errors %}
+                                    <div class="text-danger">{{ form.order.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Zone d'aide contextuelle -->
+                        <div class="question-type-help" id="question-type-help">
+                            <div id="help-multiple_choice" class="help-content" style="display: none;">
+                                <h6><i class="fas fa-check-square text-primary me-2"></i>Question à choix multiples (QCM)</h6>
+                                <p class="small mb-0">Les étudiants peuvent sélectionner plusieurs bonnes réponses. Idéal pour évaluer la connaissance de concepts multiples.</p>
+                            </div>
+                            <div id="help-single_choice" class="help-content" style="display: none;">
+                                <h6><i class="fas fa-dot-circle text-primary me-2"></i>Question à choix unique (QCU)</h6>
+                                <p class="small mb-0">Une seule bonne réponse parmi les choix proposés. Format classique pour tester la compréhension.</p>
+                            </div>
+                            <div id="help-true_false" class="help-content" style="display: none;">
+                                <h6><i class="fas fa-toggle-on text-primary me-2"></i>Vrai/Faux</h6>
+                                <p class="small mb-0">Question simple avec deux options : Vrai ou Faux. Parfait pour vérifier des faits précis.</p>
+                            </div>
+                            <div id="help-short_answer" class="help-content" style="display: none;">
+                                <h6><i class="fas fa-keyboard text-primary me-2"></i>Réponse courte</h6>
+                                <p class="small mb-0">L'étudiant tape une réponse courte. Vous pouvez définir plusieurs réponses acceptées (une par ligne).</p>
+                            </div>
+                            <div id="help-numerical" class="help-content" style="display: none;">
+                                <h6><i class="fas fa-calculator text-primary me-2"></i>Réponse numérique</h6>
+                                <p class="small mb-0">Question nécessitant une réponse numérique. Vous pouvez définir une tolérance pour les approximations.</p>
+                            </div>
+                            <div id="help-essay" class="help-content" style="display: none;">
+                                <h6><i class="fas fa-align-left text-primary me-2"></i>Essai/Rédaction</h6>
+                                <p class="small mb-0">Question ouverte nécessitant une réponse développée. Évaluation manuelle requise.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section: Question -->
+                    <div class="form-section">
+                        <h5 class="text-primary mb-3">
+                            <i class="fas fa-question-circle me-2"></i>Énoncé de la question
+                        </h5>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.question_text.id_for_label }}" class="form-label">
+                                Texte de la question <span class="text-danger">*</span>
+                            </label>
+                            {{ form.question_text }}
+                            {% if form.question_text.errors %}
+                                <div class="text-danger">{{ form.question_text.errors.0 }}</div>
+                            {% endif %}
+                            <div class="form-text">
+                                Rédigez clairement votre question. Vous pouvez utiliser du texte riche si nécessaire.
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.image.id_for_label }}" class="form-label">
+                                Image (optionnelle)
+                            </label>
+                            {{ form.image }}
+                            {% if form.image.errors %}
+                                <div class="text-danger">{{ form.image.errors.0 }}</div>
+                            {% endif %}
+                            <div class="form-text">
+                                Ajoutez une image pour illustrer votre question (PNG, JPG, GIF)
+                            </div>
+                            {% if question and question.image %}
+                            <div class="current-image mt-2">
+                                <img src="{{ question.image.url }}" class="image-preview" alt="Image actuelle">
+                                <div class="form-text"><strong>Image actuelle</strong></div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Section: Configuration spécifique au type -->
+                    
+                    <!-- Réponse numérique -->
+                    <div class="form-section conditional-field" id="numerical-config">
+                        <h5 class="text-primary mb-3">
+                            <i class="fas fa-calculator me-2"></i>Configuration numérique
+                        </h5>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.correct_number.id_for_label }}" class="form-label">
+                                    Réponse correcte
+                                </label>
+                                {{ form.correct_number }}
+                                {% if form.correct_number.errors %}
+                                    <div class="text-danger">{{ form.correct_number.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.tolerance.id_for_label }}" class="form-label">
+                                    Tolérance
+                                </label>
+                                {{ form.tolerance }}
+                                {% if form.tolerance.errors %}
+                                    <div class="text-danger">{{ form.tolerance.errors.0 }}</div>
+                                {% endif %}
+                                <div class="form-text">
+                                    Écart acceptable (ex: réponse 10, tolérance 0.5 → accepte 9.5 à 10.5)
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Réponse courte -->
+                    <div class="form-section conditional-field" id="text-config">
+                        <h5 class="text-primary mb-3">
+                            <i class="fas fa-keyboard me-2"></i>Configuration textuelle
+                        </h5>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.correct_text.id_for_label }}" class="form-label">
+                                Réponses acceptées
+                            </label>
+                            {{ form.correct_text }}
+                            {% if form.correct_text.errors %}
+                                <div class="text-danger">{{ form.correct_text.errors.0 }}</div>
+                            {% endif %}
+                            <div class="form-text">
+                                Saisissez les réponses acceptées, une par ligne. Exemple:<br>
+                                Paris<br>
+                                paris<br>
+                                La capitale de la France
+                            </div>
+                        </div>
+                        
+                        <div class="form-check mb-3">
+                            {{ form.case_sensitive }}
+                            <label for="{{ form.case_sensitive.id_for_label }}" class="form-check-label">
+                                Sensible à la casse
+                            </label>
+                            <div class="form-text">
+                                Si coché, "Paris" et "paris" seront considérés différemment
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section: Explication -->
+                    <div class="form-section">
+                        <h5 class="text-primary mb-3">
+                            <i class="fas fa-lightbulb me-2"></i>Explication (optionnelle)
+                        </h5>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.explanation.id_for_label }}" class="form-label">
+                                Explication de la réponse
+                            </label>
+                            {{ form.explanation }}
+                            {% if form.explanation.errors %}
+                                <div class="text-danger">{{ form.explanation.errors.0 }}</div>
+                            {% endif %}
+                            <div class="form-text">
+                                Cette explication sera affichée après la soumission pour aider l'apprentissage
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="d-flex gap-3">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save me-2"></i>
+                            {% if question %}Sauvegarder les modifications{% else %}Créer la question{% endif %}
+                        </button>
+                        
+                        <a href="{% url 'quiz:quiz_detail' quiz.pk %}" class="btn btn-secondary">
+                            <i class="fas fa-times me-2"></i>Annuler
+                        </a>
+                        
+                        {% if not question %}
+                        <button type="submit" name="add_another" value="1" class="btn btn-outline-primary">
+                            <i class="fas fa-plus me-2"></i>Sauvegarder et créer une autre
+                        </button>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <!-- Aperçu de la question -->
+            <div class="card sticky-top" style="top: 1rem;">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-eye me-2"></i>Aperçu
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div id="question-preview" class="preview-area">
+                        <div class="text-muted text-center">
+                            <i class="fas fa-eye fa-2x mb-2"></i><br>
+                            L'aperçu apparaîtra ici lors de la saisie
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Guide rapide -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-info me-2"></i>Conseils
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="small">
+                        <div class="mb-2">
+                            <strong>Questions efficaces :</strong>
+                        </div>
+                        <ul class="small ps-3">
+                            <li>Soyez clair et concis</li>
+                            <li>Évitez les questions piège</li>
+                            <li>Une seule idée par question</li>
+                            <li>Utilisez un vocabulaire approprié</li>
+                        </ul>
+                        
+                        <hr class="my-2">
+                        
+                        <div class="mb-2">
+                            <strong>Points recommandés :</strong>
+                        </div>
+                        <ul class="small ps-3">
+                            <li>Questions faciles : 1-2 points</li>
+                            <li>Questions moyennes : 3-4 points</li>
+                            <li>Questions difficiles : 5+ points</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const questionTypeSelect = document.getElementById('{{ form.question_type.id_for_label }}');
+    const questionTextArea = document.getElementById('{{ form.question_text.id_for_label }}');
+    const previewArea = document.getElementById('question-preview');
+    
+    // Gestion de l'affichage conditionnel
+    function toggleConditionalFields() {
+        const selectedType = questionTypeSelect.value;
+        
+        // Masquer tous les champs conditionnels
+        document.querySelectorAll('.conditional-field').forEach(field => {
+            field.classList.remove('show');
+        });
+        
+        // Masquer toutes les aides
+        document.querySelectorAll('.help-content').forEach(help => {
+            help.style.display = 'none';
+        });
+        
+        // Afficher les champs pertinents
+        if (selectedType === 'numerical') {
+            document.getElementById('numerical-config')?.classList.add('show');
+        } else if (['short_answer', 'essay'].includes(selectedType)) {
+            document.getElementById('text-config')?.classList.add('show');
+        }
+        
+        // Afficher l'aide correspondante
+        const helpElement = document.getElementById(`help-${selectedType}`);
+        if (helpElement) {
+            helpElement.style.display = 'block';
+        }
+    }
+    
+    // Mise à jour de l'aperçu
+    function updatePreview() {
+        const questionText = questionTextArea.value.trim();
+        const questionType = questionTypeSelect.value;
+        
+        if (!questionText) {
+            previewArea.innerHTML = `
+                <div class="text-muted text-center">
+                    <i class="fas fa-eye fa-2x mb-2"></i><br>
+                    L'aperçu apparaîtra ici lors de la saisie
+                </div>
+            `;
+            return;
+        }
+        
+        let typeLabel = questionTypeSelect.options[questionTypeSelect.selectedIndex]?.text || 'Question';
+        let previewContent = `
+            <div class="mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="badge bg-primary">${typeLabel}</span>
+                    <span class="badge bg-success">${document.getElementById('{{ form.points.id_for_label }}').value || 1} pts</span>
+                </div>
+                <div class="fw-bold mb-2">${questionText}</div>
+            </div>
+        `;
+        
+        // Ajouter un exemple de réponse selon le type
+        switch (questionType) {
+            case 'multiple_choice':
+                previewContent += `
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" disabled>
+                        <label class="form-check-label">Choix A</label>
+                    </div>
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" disabled>
+                        <label class="form-check-label">Choix B</label>
+                    </div>
+                    <small class="text-muted">Les choix seront configurés séparément</small>
+                `;
+                break;
+                
+            case 'single_choice':
+                previewContent += `
+                    <div class="form-check">
+                        <input type="radio" class="form-check-input" disabled>
+                        <label class="form-check-label">Choix A</label>
+                    </div>
+                    <div class="form-check">
+                        <input type="radio" class="form-check-input" disabled>
+                        <label class="form-check-label">Choix B</label>
+                    </div>
+                    <small class="text-muted">Les choix seront configurés séparément</small>
+                `;
+                break;
+                
+            case 'true_false':
+                previewContent += `
+                    <div class="form-check">
+                        <input type="radio" class="form-check-input" disabled>
+                        <label class="form-check-label">Vrai</label>
+                    </div>
+                    <div class="form-check">
+                        <input type="radio" class="form-check-input" disabled>
+                        <label class="form-check-label">Faux</label>
+                    </div>
+                `;
+                break;
+                
+            case 'short_answer':
+                previewContent += `
+                    <input type="text" class="form-control" placeholder="Votre réponse..." disabled>
+                `;
+                break;
+                
+            case 'numerical':
+                previewContent += `
+                    <input type="number" class="form-control" placeholder="Entrez un nombre..." disabled>
+                `;
+                break;
+                
+            case 'essay':
+                previewContent += `
+                    <textarea class="form-control" rows="4" placeholder="Rédigez votre réponse..." disabled></textarea>
+                `;
+                break;
+        }
+        
+        previewArea.innerHTML = previewContent;
+    }
+    
+    // Event listeners
+    questionTypeSelect.addEventListener('change', function() {
+        toggleConditionalFields();
+        updatePreview();
+    });
+    
+    questionTextArea.addEventListener('input', updatePreview);
+    
+    document.getElementById('{{ form.points.id_for_label }}').addEventListener('input', updatePreview);
+    
+    // Initialisation
+    toggleConditionalFields();
+    updatePreview();
+    
+    // Validation du formulaire
+    document.getElementById('question-form').addEventListener('submit', function(e) {
+        const questionText = questionTextArea.value.trim();
+        const questionType = questionTypeSelect.value;
+        
+        if (!questionText) {
+            e.preventDefault();
+            alert('Veuillez saisir le texte de la question.');
+            questionTextArea.focus();
+            return;
+        }
+        
+        // Validation spécifique selon le type
+        if (questionType === 'numerical') {
+            const correctNumber = document.getElementById('{{ form.correct_number.id_for_label }}').value;
+            if (!correctNumber) {
+                e.preventDefault();
+                alert('Veuillez saisir la réponse numérique correcte.');
+                return;
+            }
+        } else if (['short_answer', 'essay'].includes(questionType)) {
+            const correctText = document.getElementById('{{ form.correct_text.id_for_label }}').value.trim();
+            if (!correctText) {
+                e.preventDefault();
+                alert('Veuillez saisir au moins une réponse acceptée.');
+                return;
+            }
+        }
+    });
+    
+    // Gestion de l'aperçu d'image
+    const imageInput = document.getElementById('{{ form.image.id_for_label }}');
+    if (imageInput) {
+        imageInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const existingPreview = document.querySelector('.new-image-preview');
+                    if (existingPreview) {
+                        existingPreview.remove();
+                    }
+                    
+                    const imgPreview = document.createElement('div');
+                    imgPreview.className = 'new-image-preview mt-2';
+                    imgPreview.innerHTML = `
+                        <img src="${e.target.result}" class="image-preview" alt="Nouvelle image">
+                        <div class="form-text"><strong>Nouvelle image (aperçu)</strong></div>
+                    `;
+                    imageInput.parentNode.appendChild(imgPreview);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

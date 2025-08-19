@@ -1,0 +1,403 @@
+{% extends 'instructor/base.html' %}
+{% load static %}
+
+{% block title %}Mes Quiz - {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.quiz-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.quiz-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.quiz-stats {
+    font-size: 0.9em;
+    color: #6c757d;
+}
+.filter-sidebar {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 1.5rem;
+}
+.quiz-type-badge {
+    font-size: 0.8em;
+    font-weight: 500;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <!-- Sidebar Filtres -->
+        <div class="col-md-3">
+            <div class="filter-sidebar">
+                <h5 class="mb-3">
+                    <i class="fas fa-filter me-2"></i>Filtres
+                </h5>
+                
+                <form method="get" id="filter-form">
+                    <!-- Recherche -->
+                    <div class="mb-3">
+                        <label for="search" class="form-label">Rechercher</label>
+                        <input type="text" class="form-control" id="search" name="search" 
+                               value="{{ search }}" placeholder="Titre du quiz...">
+                    </div>
+                    
+                    <!-- Cours -->
+                    <div class="mb-3">
+                        <label for="course" class="form-label">Cours</label>
+                        <select class="form-select" id="course" name="course">
+                            <option value="">Tous les cours</option>
+                            {% for course in user_courses %}
+                            <option value="{{ course.id }}" {% if course.id|stringformat:"s" == current_course %}selected{% endif %}>
+                                {{ course.title }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <!-- Type de quiz -->
+                    <div class="mb-3">
+                        <label for="quiz_type" class="form-label">Type</label>
+                        <select class="form-select" id="quiz_type" name="quiz_type">
+                            <option value="">Tous les types</option>
+                            {% for value, label in quiz_type_choices %}
+                            <option value="{{ value }}" {% if value == current_quiz_type %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <!-- Statut publication -->
+                    <div class="mb-3">
+                        <label for="is_published" class="form-label">Statut</label>
+                        <select class="form-select" id="is_published" name="is_published">
+                            <option value="">Tous</option>
+                            <option value="true" {% if current_is_published == "true" %}selected{% endif %}>Publiés</option>
+                            <option value="false" {% if current_is_published == "false" %}selected{% endif %}>Brouillons</option>
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary btn-sm w-100">
+                        <i class="fas fa-search me-2"></i>Filtrer
+                    </button>
+                    <a href="{% url 'quiz:quiz_list' %}" class="btn btn-outline-secondary btn-sm w-100 mt-2">
+                        <i class="fas fa-times me-2"></i>Effacer
+                    </a>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Contenu Principal -->
+        <div class="col-md-9">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2>
+                        <i class="fas fa-clipboard-list me-3 text-primary"></i>
+                        Mes Quiz
+                    </h2>
+                    <p class="text-muted mb-0">Gérez vos évaluations et quiz</p>
+                </div>
+                <a href="{% url 'quiz:quiz_create' %}" class="btn btn-success">
+                    <i class="fas fa-plus me-2"></i>Nouveau Quiz
+                </a>
+            </div>
+            
+            <!-- Statistiques rapides -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="card-title mb-0">Total Quiz</h6>
+                                    <h4 class="mb-0">{{ quizzes.paginator.count }}</h4>
+                                </div>
+                                <i class="fas fa-clipboard-list fa-2x opacity-75"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="card-title mb-0">Publiés</h6>
+                                    <h4 class="mb-0">{{ quizzes.object_list|length }}</h4>
+                                </div>
+                                <i class="fas fa-check-circle fa-2x opacity-75"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-warning text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="card-title mb-0">Brouillons</h6>
+                                    <h4 class="mb-0">0</h4>
+                                </div>
+                                <i class="fas fa-edit fa-2x opacity-75"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-info text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="card-title mb-0">Cette semaine</h6>
+                                    <h4 class="mb-0">0</h4>
+                                </div>
+                                <i class="fas fa-calendar-week fa-2x opacity-75"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Liste des quiz -->
+            {% if quizzes %}
+            <div class="row">
+                {% for quiz in quizzes %}
+                <div class="col-xl-6 mb-4">
+                    <div class="card quiz-card h-100">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <h5 class="card-title mb-0">
+                                    <a href="{% url 'quiz:quiz_detail' quiz.pk %}" class="text-decoration-none">
+                                        {{ quiz.title }}
+                                    </a>
+                                </h5>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" 
+                                            data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" href="{% url 'quiz:quiz_detail' quiz.pk %}">
+                                            <i class="fas fa-eye me-2"></i>Voir détails</a></li>
+                                        <li><a class="dropdown-item" href="{% url 'quiz:quiz_edit' quiz.pk %}">
+                                            <i class="fas fa-edit me-2"></i>Modifier</a></li>
+                                        <li><a class="dropdown-item" href="{% url 'quiz:quiz_preview' quiz.pk %}">
+                                            <i class="fas fa-search me-2"></i>Prévisualiser</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <form method="post" action="{% url 'quiz:quiz_duplicate' quiz.pk %}" class="d-inline">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="new_title" value="Copie de {{ quiz.title }}">
+                                                <button type="submit" class="dropdown-item">
+                                                    <i class="fas fa-copy me-2"></i>Dupliquer
+                                                </button>
+                                            </form>
+                                        </li>
+                                        <li>
+                                            <form method="post" action="{% url 'quiz:quiz_delete' quiz.pk %}" 
+                                                  onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce quiz ?')" class="d-inline">
+                                                {% csrf_token %}
+                                                <button type="submit" class="dropdown-item text-danger">
+                                                    <i class="fas fa-trash me-2"></i>Supprimer
+                                                </button>
+                                            </form>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                            
+                            <!-- Badges et meta-info -->
+                            <div class="d-flex flex-wrap gap-2 mb-3">
+                                <span class="badge bg-{% if quiz.is_published %}success{% else %}secondary{% endif %}">
+                                    {% if quiz.is_published %}Publié{% else %}Brouillon{% endif %}
+                                </span>
+                                
+                                <span class="badge bg-primary quiz-type-badge">
+                                    {{ quiz.get_quiz_type_display }}
+                                </span>
+                                
+                                {% if quiz.difficulty %}
+                                <span class="badge bg-{% if quiz.difficulty == 'easy' %}success{% elif quiz.difficulty == 'medium' %}warning{% else %}danger{% endif %}">
+                                    {{ quiz.get_difficulty_display }}
+                                </span>
+                                {% endif %}
+                                
+                                {% if quiz.time_limit %}
+                                <span class="badge bg-info">
+                                    <i class="fas fa-clock me-1"></i>{{ quiz.time_limit }}min
+                                </span>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Description -->
+                            {% if quiz.description %}
+                            <p class="card-text text-muted small">
+                                {{ quiz.description|truncatechars:120 }}
+                            </p>
+                            {% endif %}
+                            
+                            <!-- Informations cours -->
+                            {% if quiz.course %}
+                            <div class="quiz-stats mb-2">
+                                <i class="fas fa-book me-2"></i>{{ quiz.course.title }}
+                                {% if quiz.lesson %}
+                                → {{ quiz.lesson.title }}
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Statistiques -->
+                            <div class="quiz-stats">
+                                <div class="row text-center">
+                                    <div class="col-4">
+                                        <strong>{{ quiz.total_questions }}</strong><br>
+                                        <small>Questions</small>
+                                    </div>
+                                    <div class="col-4">
+                                        <strong>{{ quiz.total_points }}</strong><br>
+                                        <small>Points</small>
+                                    </div>
+                                    <div class="col-4">
+                                        <strong>0</strong><br>
+                                        <small>Tentatives</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card-footer bg-transparent">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar me-1"></i>
+                                    Créé le {{ quiz.created_at|date:"d/m/Y" }}
+                                </small>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    {% if quiz.is_published %}
+                                    <form method="post" action="{% url 'quiz:quiz_publish' quiz.pk %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-outline-warning btn-sm" 
+                                                title="Dépublier">
+                                            <i class="fas fa-eye-slash"></i>
+                                        </button>
+                                    </form>
+                                    {% else %}
+                                    <form method="post" action="{% url 'quiz:quiz_publish' quiz.pk %}" class="d-inline">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-outline-success btn-sm" 
+                                                title="Publier">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </form>
+                                    {% endif %}
+                                    
+                                    <a href="{% url 'quiz:quiz_analytics' quiz.pk %}" 
+                                       class="btn btn-outline-info btn-sm" title="Analytics">
+                                        <i class="fas fa-chart-bar"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <!-- Pagination -->
+            {% if quizzes.has_other_pages %}
+            <nav aria-label="Navigation quiz">
+                <ul class="pagination justify-content-center">
+                    {% if quizzes.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ quizzes.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if current_course %}&course={{ current_course }}{% endif %}{% if current_quiz_type %}&quiz_type={{ current_quiz_type }}{% endif %}{% if current_is_published %}&is_published={{ current_is_published }}{% endif %}">
+                            Précédent
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for num in quizzes.paginator.page_range %}
+                    {% if num == quizzes.number %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > quizzes.number|add:'-3' and num < quizzes.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if current_course %}&course={{ current_course }}{% endif %}{% if current_quiz_type %}&quiz_type={{ current_quiz_type }}{% endif %}{% if current_is_published %}&is_published={{ current_is_published }}{% endif %}">
+                            {{ num }}
+                        </a>
+                    </li>
+                    {% endif %}
+                    {% endfor %}
+                    
+                    {% if quizzes.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ quizzes.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if current_course %}&course={{ current_course }}{% endif %}{% if current_quiz_type %}&quiz_type={{ current_quiz_type }}{% endif %}{% if current_is_published %}&is_published={{ current_is_published }}{% endif %}">
+                            Suivant
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            
+            {% else %}
+            <!-- État vide -->
+            <div class="text-center py-5">
+                <div class="mb-4">
+                    <i class="fas fa-clipboard-list fa-5x text-muted"></i>
+                </div>
+                <h4 class="text-muted">Aucun quiz trouvé</h4>
+                <p class="text-muted">
+                    {% if search or current_course or current_quiz_type or current_is_published %}
+                    Aucun quiz ne correspond à vos critères de recherche.
+                    <br><a href="{% url 'quiz:quiz_list' %}" class="btn btn-outline-primary mt-2">Voir tous les quiz</a>
+                    {% else %}
+                    Commencez par créer votre premier quiz !
+                    <br><a href="{% url 'quiz:quiz_create' %}" class="btn btn-success mt-2">Créer un quiz</a>
+                    {% endif %}
+                </p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-submit du formulaire de filtre sur changement
+    const filterInputs = document.querySelectorAll('#filter-form input, #filter-form select');
+    filterInputs.forEach(input => {
+        if (input.type === 'text') {
+            let timeout;
+            input.addEventListener('keyup', function() {
+                clearTimeout(timeout);
+                timeout = setTimeout(() => {
+                    document.getElementById('filter-form').submit();
+                }, 500);
+            });
+        } else {
+            input.addEventListener('change', function() {
+                document.getElementById('filter-form').submit();
+            });
+        }
+    });
+    
+    // Confirmation pour les actions de suppression
+    const deleteButtons = document.querySelectorAll('form[action*="/delete/"] button[type="submit"]');
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            if (!confirm('Êtes-vous sûr de vouloir supprimer cet élément ?')) {
+                e.preventDefault();
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

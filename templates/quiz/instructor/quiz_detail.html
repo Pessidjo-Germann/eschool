@@ -1,0 +1,497 @@
+{% extends 'instructor/base.html' %}
+{% load static %}
+
+{% block title %}{{ quiz.title }} - {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.quiz-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+}
+.question-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+    border-left: 4px solid #007bff;
+}
+.question-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.question-actions {
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+.question-card:hover .question-actions {
+    opacity: 1;
+}
+.sortable-ghost {
+    opacity: 0.4;
+}
+.stats-card {
+    border-radius: 8px;
+    padding: 1.5rem;
+    height: 100%;
+}
+.question-type-badge {
+    font-size: 0.8em;
+    font-weight: 500;
+}
+.drag-handle {
+    cursor: move;
+    color: #6c757d;
+}
+.drag-handle:hover {
+    color: #495057;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{% url 'instructor:dashboard' %}">Dashboard</a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'quiz:quiz_list' %}">Quiz</a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">{{ quiz.title }}</li>
+        </ol>
+    </nav>
+
+    <!-- Header du Quiz -->
+    <div class="quiz-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="d-flex align-items-center mb-2">
+                    <h1 class="mb-0 me-3">{{ quiz.title }}</h1>
+                    <span class="badge bg-{% if quiz.is_published %}success{% else %}warning{% endif %} fs-6">
+                        {% if quiz.is_published %}Publié{% else %}Brouillon{% endif %}
+                    </span>
+                </div>
+                
+                {% if quiz.description %}
+                <p class="mb-0 opacity-75">{{ quiz.description }}</p>
+                {% endif %}
+                
+                <div class="mt-3">
+                    {% if quiz.course %}
+                    <span class="badge bg-light text-dark me-2">
+                        <i class="fas fa-book me-1"></i>{{ quiz.course.title }}
+                    </span>
+                    {% endif %}
+                    
+                    {% if quiz.lesson %}
+                    <span class="badge bg-light text-dark me-2">
+                        <i class="fas fa-play me-1"></i>{{ quiz.lesson.title }}
+                    </span>
+                    {% endif %}
+                    
+                    <span class="badge bg-light text-dark me-2">
+                        <i class="fas fa-star me-1"></i>{{ quiz.get_difficulty_display }}
+                    </span>
+                    
+                    {% if quiz.time_limit %}
+                    <span class="badge bg-light text-dark">
+                        <i class="fas fa-clock me-1"></i>{{ quiz.time_limit }} min
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="col-md-4 text-md-end">
+                <div class="btn-group" role="group">
+                    <a href="{% url 'quiz:quiz_edit' quiz.pk %}" class="btn btn-light">
+                        <i class="fas fa-edit me-2"></i>Modifier
+                    </a>
+                    
+                    <a href="{% url 'quiz:quiz_preview' quiz.pk %}" class="btn btn-light">
+                        <i class="fas fa-eye me-2"></i>Prévisualiser
+                    </a>
+                    
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-light dropdown-toggle" 
+                                data-bs-toggle="dropdown" aria-expanded="false">
+                            Actions
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <form method="post" action="{% url 'quiz:quiz_publish' quiz.pk %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="dropdown-item">
+                                        <i class="fas fa-{% if quiz.is_published %}eye-slash{% else %}eye{% endif %} me-2"></i>
+                                        {% if quiz.is_published %}Dépublier{% else %}Publier{% endif %}
+                                    </button>
+                                </form>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <form method="post" action="{% url 'quiz:quiz_duplicate' quiz.pk %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="new_title" value="Copie de {{ quiz.title }}">
+                                    <button type="submit" class="dropdown-item">
+                                        <i class="fas fa-copy me-2"></i>Dupliquer
+                                    </button>
+                                </form>
+                            </li>
+                            <li>
+                                <a href="{% url 'quiz:quiz_analytics' quiz.pk %}" class="dropdown-item">
+                                    <i class="fas fa-chart-bar me-2"></i>Analytics
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
+                                <form method="post" action="{% url 'quiz:quiz_delete' quiz.pk %}" 
+                                      onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce quiz ?')" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="dropdown-item text-danger">
+                                        <i class="fas fa-trash me-2"></i>Supprimer
+                                    </button>
+                                </form>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card stats-card bg-primary text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h4 class="mb-0">{{ stats.total_questions }}</h4>
+                        <small class="opacity-75">Questions</small>
+                    </div>
+                    <i class="fas fa-question fa-2x opacity-50"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card bg-success text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h4 class="mb-0">{{ stats.total_points }}</h4>
+                        <small class="opacity-75">Points total</small>
+                    </div>
+                    <i class="fas fa-star fa-2x opacity-50"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card bg-info text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h4 class="mb-0">{{ stats.total_attempts }}</h4>
+                        <small class="opacity-75">Tentatives</small>
+                    </div>
+                    <i class="fas fa-users fa-2x opacity-50"></i>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card bg-warning text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h4 class="mb-0">{{ stats.average_score|floatformat:1 }}%</h4>
+                        <small class="opacity-75">Score moyen</small>
+                    </div>
+                    <i class="fas fa-chart-line fa-2x opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Questions -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list-ol me-2"></i>Questions ({{ questions.count }})
+                    </h5>
+                    <a href="{% url 'quiz:question_create' quiz.pk %}" class="btn btn-primary btn-sm">
+                        <i class="fas fa-plus me-2"></i>Ajouter une question
+                    </a>
+                </div>
+                
+                <div class="card-body p-0">
+                    {% if questions %}
+                    <div id="questions-list">
+                        {% for question in questions %}
+                        <div class="question-card card border-0 border-bottom" data-question-id="{{ question.id }}">
+                            <div class="card-body">
+                                <div class="d-flex align-items-start">
+                                    <div class="drag-handle me-3 mt-1">
+                                        <i class="fas fa-grip-vertical"></i>
+                                    </div>
+                                    
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <div>
+                                                <h6 class="mb-1">
+                                                    Question {{ question.order|default:forloop.counter }}
+                                                </h6>
+                                                <div class="question-text">
+                                                    {{ question.question_text|truncatechars:100 }}
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="question-actions">
+                                                <div class="btn-group btn-group-sm" role="group">
+                                                    <a href="{% url 'quiz:question_edit' quiz.pk question.pk %}" 
+                                                       class="btn btn-outline-primary" title="Modifier">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                    
+                                                    {% if question.question_type in 'multiple_choice,single_choice,true_false'|split:',' %}
+                                                    <a href="{% url 'quiz:question_edit_choices' quiz.pk question.pk %}" 
+                                                       class="btn btn-outline-info" title="Choix de réponse">
+                                                        <i class="fas fa-list-ul"></i>
+                                                    </a>
+                                                    {% endif %}
+                                                    
+                                                    <form method="post" action="{% url 'quiz:question_delete' quiz.pk question.pk %}" 
+                                                          class="d-inline" onsubmit="return confirm('Supprimer cette question ?')">
+                                                        {% csrf_token %}
+                                                        <button type="submit" class="btn btn-outline-danger" title="Supprimer">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="d-flex flex-wrap gap-2 align-items-center">
+                                            <span class="badge bg-primary question-type-badge">
+                                                {{ question.get_question_type_display }}
+                                            </span>
+                                            
+                                            <span class="badge bg-success">
+                                                {{ question.points }} point{{ question.points|pluralize }}
+                                            </span>
+                                            
+                                            {% if question.explanation %}
+                                            <span class="badge bg-info">
+                                                <i class="fas fa-info-circle"></i> Explication
+                                            </span>
+                                            {% endif %}
+                                            
+                                            {% if question.image %}
+                                            <span class="badge bg-warning">
+                                                <i class="fas fa-image"></i> Image
+                                            </span>
+                                            {% endif %}
+                                            
+                                            <!-- Indicateur de validité -->
+                                            {% if question.question_type in 'multiple_choice,single_choice,true_false'|split:',' %}
+                                                {% if not question.choices.exists %}
+                                                <span class="badge bg-danger">
+                                                    <i class="fas fa-exclamation-triangle"></i> Aucun choix
+                                                </span>
+                                                {% elif not question.choices.filter|filter:'is_correct' %}
+                                                <span class="badge bg-danger">
+                                                    <i class="fas fa-exclamation-triangle"></i> Pas de bonne réponse
+                                                </span>
+                                                {% else %}
+                                                <span class="badge bg-success">
+                                                    <i class="fas fa-check"></i> Valide
+                                                </span>
+                                                {% endif %}
+                                            {% else %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check"></i> Valide
+                                            </span>
+                                            {% endif %}
+                                        </div>
+                                        
+                                        <!-- Aperçu des choix pour QCM -->
+                                        {% if question.question_type in 'multiple_choice,single_choice,true_false'|split:',' and question.choices.exists %}
+                                        <div class="mt-2">
+                                            <small class="text-muted">Choix disponibles:</small>
+                                            <div class="small mt-1">
+                                                {% for choice in question.choices.all|slice:":3" %}
+                                                <span class="badge bg-{% if choice.is_correct %}success{% else %}light text-dark{% endif %} me-1">
+                                                    {% if choice.is_correct %}<i class="fas fa-check me-1"></i>{% endif %}
+                                                    {{ choice.choice_text|truncatechars:30 }}
+                                                </span>
+                                                {% endfor %}
+                                                {% if question.choices.count > 3 %}
+                                                <span class="text-muted">... +{{ question.choices.count|add:"-3" }} autres</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-question fa-4x text-muted mb-3"></i>
+                        <h5 class="text-muted">Aucune question</h5>
+                        <p class="text-muted">Commencez par ajouter des questions à votre quiz</p>
+                        <a href="{% url 'quiz:question_create' quiz.pk %}" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Ajouter la première question
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Configuration rapide -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-cog me-2"></i>Configuration
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="border-end">
+                                <strong>{{ quiz.time_limit|default:"∞" }}</strong><br>
+                                <small class="text-muted">Minutes</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <strong>{{ quiz.max_attempts }}</strong><br>
+                            <small class="text-muted">Tentatives</small>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="small">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Score de passage:</span>
+                            <strong>{{ quiz.passing_score }}%</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Questions mélangées:</span>
+                            <span class="badge bg-{% if quiz.randomize_questions %}success{% else %}secondary{% endif %}">
+                                {% if quiz.randomize_questions %}Oui{% else %}Non{% endif %}
+                            </span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>Réponses mélangées:</span>
+                            <span class="badge bg-{% if quiz.randomize_answers %}success{% else %}secondary{% endif %}">
+                                {% if quiz.randomize_answers %}Oui{% else %}Non{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Activité récente -->
+            {% if stats.last_attempt %}
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-clock me-2"></i>Dernière activité
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <i class="fas fa-user fa-2x text-primary"></i>
+                        </div>
+                        <div>
+                            <div class="fw-bold">{{ stats.last_attempt.user.get_full_name|default:stats.last_attempt.user.username }}</div>
+                            <small class="text-muted">
+                                {{ stats.last_attempt.started_at|timesince }} ago
+                                {% if stats.last_attempt.score is not None %}
+                                - {{ stats.last_attempt.score }}%
+                                {% endif %}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Rendre les questions triables
+    const questionsList = document.getElementById('questions-list');
+    if (questionsList) {
+        const sortable = Sortable.create(questionsList, {
+            handle: '.drag-handle',
+            ghostClass: 'sortable-ghost',
+            onEnd: function(evt) {
+                const questionOrders = Array.from(questionsList.children).map((el, index) => ({
+                    id: el.dataset.questionId,
+                    order: index + 1
+                }));
+                
+                // Envoyer la nouvelle ordre via AJAX
+                fetch(`{% url 'quiz:ajax_reorder_questions' quiz.pk %}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                                       document.querySelector('input[name="csrfmiddlewaretoken"]')?.value
+                    },
+                    body: JSON.stringify(questionOrders)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Mettre à jour les numéros de questions
+                        document.querySelectorAll('.question-card').forEach((card, index) => {
+                            const questionNumber = card.querySelector('h6');
+                            if (questionNumber) {
+                                questionNumber.textContent = `Question ${index + 1}`;
+                            }
+                        });
+                    } else {
+                        alert('Erreur lors de la réorganisation: ' + (data.error || 'Erreur inconnue'));
+                        // Recharger la page pour restaurer l'ordre original
+                        location.reload();
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur:', error);
+                    alert('Erreur de connexion lors de la réorganisation');
+                    location.reload();
+                });
+            }
+        });
+    }
+    
+    // Confirmation pour les suppressions
+    const deleteButtons = document.querySelectorAll('form[action*="/delete/"] button[type="submit"]');
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            if (!confirm('Êtes-vous sûr de vouloir supprimer cet élément ? Cette action est irréversible.')) {
+                e.preventDefault();
+            }
+        });
+    });
+    
+    // Edition rapide inline (optionnel)
+    document.querySelectorAll('.question-text').forEach(element => {
+        element.addEventListener('dblclick', function() {
+            // Logique d'édition rapide inline (à implémenter si souhaité)
+            console.log('Double-click pour édition rapide');
+        });
+    });
+});
+</script>
+{% endblock %}

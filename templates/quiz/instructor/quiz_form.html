@@ -1,0 +1,373 @@
+{% extends 'instructor/base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }} - {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.form-section {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid #e9ecef;
+}
+.form-section h5 {
+    color: #495057;
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+}
+.help-text {
+    font-size: 0.875em;
+    color: #6c757d;
+}
+.datetime-widget {
+    max-width: 300px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{% url 'instructor:dashboard' %}">Dashboard</a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'quiz:quiz_list' %}">Quiz</a>
+            </li>
+            {% if quiz %}
+            <li class="breadcrumb-item">
+                <a href="{% url 'quiz:quiz_detail' quiz.pk %}">{{ quiz.title }}</a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">Modifier</li>
+            {% else %}
+            <li class="breadcrumb-item active" aria-current="page">Nouveau Quiz</li>
+            {% endif %}
+        </ol>
+    </nav>
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>
+                <i class="fas fa-{% if quiz %}edit{% else %}plus{% endif %} me-3 text-primary"></i>
+                {{ page_title }}
+            </h2>
+            <p class="text-muted mb-0">
+                {% if quiz %}
+                Modifiez les paramètres de votre quiz
+                {% else %}
+                Créez un nouveau quiz pour vos étudiants
+                {% endif %}
+            </p>
+        </div>
+        {% if quiz %}
+        <div>
+            <a href="{% url 'quiz:quiz_detail' quiz.pk %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Retour
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <form method="post" enctype="multipart/form-data" class="quiz-form">
+        {% csrf_token %}
+        
+        <div class="row">
+            <div class="col-lg-8">
+                <!-- Informations générales -->
+                <div class="form-section">
+                    <h5>
+                        <i class="fas fa-info-circle me-2"></i>Informations générales
+                    </h5>
+                    
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label for="{{ form.title.id_for_label }}" class="form-label">
+                                Titre du quiz <span class="text-danger">*</span>
+                            </label>
+                            {{ form.title }}
+                            {% if form.title.errors %}
+                                <div class="text-danger">{{ form.title.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-12 mb-3">
+                            <label for="{{ form.description.id_for_label }}" class="form-label">Description</label>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                                <div class="text-danger">{{ form.description.errors.0 }}</div>
+                            {% endif %}
+                            <div class="help-text">
+                                Décrivez brièvement les objectifs et le contenu de ce quiz
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.course.id_for_label }}" class="form-label">
+                                Cours <span class="text-danger">*</span>
+                            </label>
+                            {{ form.course }}
+                            {% if form.course.errors %}
+                                <div class="text-danger">{{ form.course.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.lesson.id_for_label }}" class="form-label">Leçon (optionnel)</label>
+                            {{ form.lesson }}
+                            {% if form.lesson.errors %}
+                                <div class="text-danger">{{ form.lesson.errors.0 }}</div>
+                            {% endif %}
+                            <div class="help-text">Sélectionnez d'abord un cours pour voir les leçons</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Configuration du quiz -->
+                <div class="form-section">
+                    <h5>
+                        <i class="fas fa-cogs me-2"></i>Configuration du quiz
+                    </h5>
+                    
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.quiz_type.id_for_label }}" class="form-label">
+                                Type de quiz <span class="text-danger">*</span>
+                            </label>
+                            {{ form.quiz_type }}
+                            {% if form.quiz_type.errors %}
+                                <div class="text-danger">{{ form.quiz_type.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.difficulty.id_for_label }}" class="form-label">Difficulté</label>
+                            {{ form.difficulty }}
+                            {% if form.difficulty.errors %}
+                                <div class="text-danger">{{ form.difficulty.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.passing_score.id_for_label }}" class="form-label">Score de passage (%)</label>
+                            {{ form.passing_score }}
+                            {% if form.passing_score.errors %}
+                                <div class="text-danger">{{ form.passing_score.errors.0 }}</div>
+                            {% endif %}
+                            <div class="help-text">Score minimum pour réussir le quiz</div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.time_limit.id_for_label }}" class="form-label">Durée limite (minutes)</label>
+                            {{ form.time_limit }}
+                            {% if form.time_limit.errors %}
+                                <div class="text-danger">{{ form.time_limit.errors.0 }}</div>
+                            {% endif %}
+                            <div class="help-text">{{ form.time_limit.help_text }}</div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.max_attempts.id_for_label }}" class="form-label">Tentatives autorisées</label>
+                            {{ form.max_attempts }}
+                            {% if form.max_attempts.errors %}
+                                <div class="text-danger">{{ form.max_attempts.errors.0 }}</div>
+                            {% endif %}
+                            <div class="help-text">Nombre maximum de tentatives par étudiant</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Disponibilité -->
+                <div class="form-section">
+                    <h5>
+                        <i class="fas fa-calendar me-2"></i>Disponibilité
+                    </h5>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.available_from.id_for_label }}" class="form-label">
+                                Disponible à partir du
+                            </label>
+                            <div class="datetime-widget">
+                                {{ form.available_from }}
+                            </div>
+                            {% if form.available_from.errors %}
+                                <div class="text-danger">{{ form.available_from.errors.0 }}</div>
+                            {% endif %}
+                            <div class="help-text">{{ form.available_from.help_text }}</div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.available_until.id_for_label }}" class="form-label">
+                                Disponible jusqu'au
+                            </label>
+                            <div class="datetime-widget">
+                                {{ form.available_until }}
+                            </div>
+                            {% if form.available_until.errors %}
+                                <div class="text-danger">{{ form.available_until.errors.0 }}</div>
+                            {% endif %}
+                            <div class="help-text">{{ form.available_until.help_text }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <!-- Options d'affichage -->
+                <div class="form-section">
+                    <h5>
+                        <i class="fas fa-eye me-2"></i>Options d'affichage
+                    </h5>
+                    
+                    <div class="form-check mb-3">
+                        {{ form.randomize_questions }}
+                        <label for="{{ form.randomize_questions.id_for_label }}" class="form-check-label">
+                            Mélanger les questions
+                        </label>
+                        <div class="help-text">Les questions apparaîtront dans un ordre aléatoire</div>
+                    </div>
+                    
+                    <div class="form-check mb-3">
+                        {{ form.randomize_answers }}
+                        <label for="{{ form.randomize_answers.id_for_label }}" class="form-check-label">
+                            Mélanger les réponses
+                        </label>
+                        <div class="help-text">Les choix de réponse seront mélangés</div>
+                    </div>
+                    
+                    <div class="form-check mb-3">
+                        {{ form.show_correct_answers }}
+                        <label for="{{ form.show_correct_answers.id_for_label }}" class="form-check-label">
+                            Montrer les bonnes réponses
+                        </label>
+                        <div class="help-text">Afficher les corrections après soumission</div>
+                    </div>
+                    
+                    <div class="form-check mb-3">
+                        {{ form.show_score_immediately }}
+                        <label for="{{ form.show_score_immediately.id_for_label }}" class="form-check-label">
+                            Afficher le score immédiatement
+                        </label>
+                        <div class="help-text">Score visible dès la soumission</div>
+                    </div>
+                </div>
+
+                <!-- Statut et publication -->
+                <div class="form-section">
+                    <h5>
+                        <i class="fas fa-toggle-on me-2"></i>Statut
+                    </h5>
+                    
+                    <div class="form-check mb-3">
+                        {{ form.is_published }}
+                        <label for="{{ form.is_published.id_for_label }}" class="form-check-label">
+                            <strong>Publier le quiz</strong>
+                        </label>
+                        <div class="help-text">Le quiz sera visible par les étudiants</div>
+                    </div>
+                    
+                    <div class="form-check mb-3">
+                        {{ form.is_required }}
+                        <label for="{{ form.is_required.id_for_label }}" class="form-check-label">
+                            Quiz obligatoire
+                        </label>
+                        <div class="help-text">Les étudiants doivent compléter ce quiz</div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="form-section">
+                    <h5>
+                        <i class="fas fa-save me-2"></i>Actions
+                    </h5>
+                    
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save me-2"></i>
+                            {% if quiz %}Sauvegarder les modifications{% else %}Créer le quiz{% endif %}
+                        </button>
+                        
+                        <a href="{% if quiz %}{% url 'quiz:quiz_detail' quiz.pk %}{% else %}{% url 'quiz:quiz_list' %}{% endif %}" 
+                           class="btn btn-secondary">
+                            <i class="fas fa-times me-2"></i>Annuler
+                        </a>
+                        
+                        {% if quiz %}
+                        <hr>
+                        <a href="{% url 'quiz:quiz_preview' quiz.pk %}" class="btn btn-outline-primary">
+                            <i class="fas fa-eye me-2"></i>Prévisualiser
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Gestion de la sélection cours -> leçons
+    const courseSelect = document.getElementById('{{ form.course.id_for_label }}');
+    const lessonSelect = document.getElementById('{{ form.lesson.id_for_label }}');
+    
+    courseSelect.addEventListener('change', function() {
+        const courseId = this.value;
+        
+        // Vider les options de leçons
+        lessonSelect.innerHTML = '<option value="">---------</option>';
+        lessonSelect.disabled = true;
+        
+        if (courseId) {
+            // Charger les leçons via AJAX
+            fetch(`{% url 'quiz:ajax_lessons' %}?course_id=${courseId}`)
+                .then(response => response.json())
+                .then(data => {
+                    data.lessons.forEach(lesson => {
+                        const option = document.createElement('option');
+                        option.value = lesson.id;
+                        option.textContent = lesson.title;
+                        lessonSelect.appendChild(option);
+                    });
+                    lessonSelect.disabled = false;
+                })
+                .catch(error => {
+                    console.error('Erreur lors du chargement des leçons:', error);
+                });
+        }
+    });
+    
+    // Validation du formulaire
+    const form = document.querySelector('.quiz-form');
+    form.addEventListener('submit', function(e) {
+        const availableFrom = document.getElementById('{{ form.available_from.id_for_label }}').value;
+        const availableUntil = document.getElementById('{{ form.available_until.id_for_label }}').value;
+        
+        if (availableFrom && availableUntil && new Date(availableFrom) >= new Date(availableUntil)) {
+            e.preventDefault();
+            alert('La date de fin doit être postérieure à la date de début.');
+            return false;
+        }
+    });
+    
+    // Amélioration UX pour les champs datetime
+    const datetimeInputs = document.querySelectorAll('input[type="datetime-local"]');
+    datetimeInputs.forEach(input => {
+        if (!input.value) {
+            // Pré-remplir avec la date actuelle
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            input.value = now.toISOString().slice(0, 16);
+        }
+    });
+});
+</script>
+{% endblock %}

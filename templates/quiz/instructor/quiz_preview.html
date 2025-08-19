@@ -1,0 +1,672 @@
+{% extends 'instructor/base.html' %}
+{% load static %}
+
+{% block title %}Aperçu - {{ quiz.title }} - {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.preview-container {
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+    overflow: hidden;
+}
+.preview-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem;
+    text-align: center;
+}
+.quiz-info-bar {
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-bottom: 1px solid #dee2e6;
+}
+.question-container {
+    padding: 2rem;
+    border-bottom: 1px solid #eee;
+    position: relative;
+}
+.question-container:last-child {
+    border-bottom: none;
+}
+.question-number {
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    background: #007bff;
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+.question-content {
+    margin-left: 4rem;
+}
+.choice-item {
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    transition: all 0.3s;
+    cursor: pointer;
+    position: relative;
+}
+.choice-item:hover {
+    border-color: #007bff;
+    background-color: #f8f9fa;
+}
+.choice-item.correct {
+    border-color: #28a745;
+    background-color: #d4edda;
+}
+.choice-item.incorrect {
+    border-color: #dc3545;
+    background-color: #f8d7da;
+}
+.choice-indicator {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    font-size: 1.2em;
+}
+.question-explanation {
+    background-color: #e7f3ff;
+    border: 1px solid #b8daff;
+    border-radius: 6px;
+    padding: 1rem;
+    margin-top: 1rem;
+}
+.preview-controls {
+    position: sticky;
+    top: 1rem;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 1.5rem;
+    z-index: 100;
+}
+.timer-display {
+    background: #dc3545;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: bold;
+    font-family: monospace;
+}
+.progress-bar-container {
+    background-color: #e9ecef;
+    border-radius: 10px;
+    height: 8px;
+    overflow: hidden;
+}
+.progress-bar {
+    background: linear-gradient(90deg, #28a745, #20c997);
+    height: 100%;
+    width: 0%;
+    transition: width 0.3s ease;
+}
+.navigation-buttons {
+    position: sticky;
+    bottom: 0;
+    background: white;
+    border-top: 1px solid #dee2e6;
+    padding: 1rem;
+    text-align: center;
+}
+.question-image {
+    max-width: 100%;
+    max-height: 300px;
+    border-radius: 6px;
+    margin: 1rem 0;
+    border: 1px solid #dee2e6;
+}
+.answer-input {
+    border: 2px solid #dee2e6;
+    border-radius: 6px;
+    padding: 0.75rem;
+    font-size: 1rem;
+    width: 100%;
+    transition: border-color 0.3s;
+}
+.answer-input:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,.25);
+    outline: none;
+}
+.score-display {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+    padding: 2rem;
+    border-radius: 8px;
+    text-align: center;
+    margin: 2rem 0;
+}
+.points-badge {
+    background-color: #6c757d;
+    color: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.875em;
+    font-weight: 500;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{% url 'instructor:dashboard' %}">Dashboard</a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'quiz:quiz_list' %}">Quiz</a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'quiz:quiz_detail' quiz.pk %}">{{ quiz.title }}</a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">Aperçu</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <div class="col-lg-9">
+            <div class="preview-container">
+                <!-- Header du quiz -->
+                <div class="preview-header">
+                    <h1 class="mb-3">{{ quiz.title }}</h1>
+                    {% if quiz.description %}
+                    <p class="mb-0 opacity-75">{{ quiz.description }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- Barre d'informations -->
+                <div class="quiz-info-bar">
+                    <div class="row align-items-center">
+                        <div class="col-md-3">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-question-circle text-primary me-2"></i>
+                                <span><strong>{{ questions.count }}</strong> questions</span>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-star text-warning me-2"></i>
+                                <span><strong>{{ quiz.total_points }}</strong> points</span>
+                            </div>
+                        </div>
+                        {% if quiz.time_limit %}
+                        <div class="col-md-3">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-clock text-danger me-2"></i>
+                                <span><strong>{{ quiz.time_limit }}</strong> minutes</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                        <div class="col-md-3">
+                            <div class="d-flex align-items-center">
+                                <i class="fas fa-target text-success me-2"></i>
+                                <span>Seuil: <strong>{{ quiz.passing_score }}%</strong></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if quiz.time_limit %}
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="small text-muted">Temps restant:</span>
+                                <div class="timer-display" id="timer-display">
+                                    {{ quiz.time_limit }}:00
+                                </div>
+                            </div>
+                            <div class="progress-bar-container mt-2">
+                                <div class="progress-bar" id="progress-bar"></div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Questions -->
+                {% if questions %}
+                {% for question in questions %}
+                <div class="question-container" data-question="{{ forloop.counter }}">
+                    <div class="question-number">{{ forloop.counter }}</div>
+                    
+                    <div class="question-content">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <h4 class="mb-0">{{ question.question_text }}</h4>
+                            <span class="points-badge">{{ question.points }} pts</span>
+                        </div>
+
+                        {% if question.image %}
+                        <img src="{{ question.image.url }}" alt="Question image" class="question-image">
+                        {% endif %}
+
+                        <!-- Réponses selon le type de question -->
+                        <div class="answers-section mt-3">
+                            {% if question.question_type == 'multiple_choice' %}
+                            <!-- QCM -->
+                            {% for choice in question.choices.all %}
+                            <div class="choice-item {% if show_answers and choice.is_correct %}correct{% endif %}" 
+                                 data-choice-id="{{ choice.id }}">
+                                <div class="d-flex align-items-start">
+                                    <input type="checkbox" class="form-check-input me-3 mt-1" 
+                                           {% if is_preview %}disabled{% endif %}>
+                                    <div class="flex-grow-1">
+                                        <div class="choice-text">{{ choice.choice_text }}</div>
+                                        {% if show_explanations and choice.explanation %}
+                                        <div class="small text-muted mt-1">{{ choice.explanation }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% if show_answers and choice.is_correct %}
+                                <div class="choice-indicator">
+                                    <i class="fas fa-check-circle text-success"></i>
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+
+                            {% elif question.question_type == 'single_choice' %}
+                            <!-- QCU -->
+                            {% for choice in question.choices.all %}
+                            <div class="choice-item {% if show_answers and choice.is_correct %}correct{% endif %}"
+                                 data-choice-id="{{ choice.id }}">
+                                <div class="d-flex align-items-start">
+                                    <input type="radio" class="form-check-input me-3 mt-1" 
+                                           name="question_{{ question.id }}"
+                                           {% if is_preview %}disabled{% endif %}>
+                                    <div class="flex-grow-1">
+                                        <div class="choice-text">{{ choice.choice_text }}</div>
+                                        {% if show_explanations and choice.explanation %}
+                                        <div class="small text-muted mt-1">{{ choice.explanation }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% if show_answers and choice.is_correct %}
+                                <div class="choice-indicator">
+                                    <i class="fas fa-check-circle text-success"></i>
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+
+                            {% elif question.question_type == 'true_false' %}
+                            <!-- Vrai/Faux -->
+                            <div class="row">
+                                {% for choice in question.choices.all %}
+                                <div class="col-md-6 mb-2">
+                                    <div class="choice-item {% if show_answers and choice.is_correct %}correct{% endif %}"
+                                         data-choice-id="{{ choice.id }}">
+                                        <div class="d-flex align-items-center justify-content-center">
+                                            <input type="radio" class="form-check-input me-3" 
+                                                   name="question_{{ question.id }}"
+                                                   {% if is_preview %}disabled{% endif %}>
+                                            <span class="fw-bold">{{ choice.choice_text }}</span>
+                                            {% if show_answers and choice.is_correct %}
+                                            <i class="fas fa-check-circle text-success ms-2"></i>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+
+                            {% elif question.question_type == 'short_answer' %}
+                            <!-- Réponse courte -->
+                            <div class="mb-3">
+                                <input type="text" class="answer-input" 
+                                       placeholder="Saisissez votre réponse..."
+                                       {% if is_preview %}disabled{% endif %}>
+                            </div>
+                            {% if show_answers and question.correct_text %}
+                            <div class="alert alert-success">
+                                <strong>Réponses acceptées:</strong><br>
+                                {% for answer in question.correct_text|linebreaks %}
+                                {{ answer }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+
+                            {% elif question.question_type == 'numerical' %}
+                            <!-- Réponse numérique -->
+                            <div class="mb-3">
+                                <input type="number" class="answer-input" 
+                                       placeholder="Entrez votre réponse numérique..."
+                                       step="any"
+                                       {% if is_preview %}disabled{% endif %}>
+                            </div>
+                            {% if show_answers %}
+                            <div class="alert alert-success">
+                                <strong>Réponse correcte:</strong> {{ question.correct_number }}
+                                {% if question.tolerance %}
+                                (± {{ question.tolerance }})
+                                {% endif %}
+                            </div>
+                            {% endif %}
+
+                            {% elif question.question_type == 'essay' %}
+                            <!-- Essai -->
+                            <div class="mb-3">
+                                <textarea class="answer-input" rows="6"
+                                          placeholder="Rédigez votre réponse..."
+                                          {% if is_preview %}disabled{% endif %}></textarea>
+                            </div>
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Cette question nécessite une évaluation manuelle.
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        {% if show_explanations and question.explanation %}
+                        <div class="question-explanation">
+                            <h6 class="text-primary mb-2">
+                                <i class="fas fa-lightbulb me-2"></i>Explication
+                            </h6>
+                            <p class="mb-0">{{ question.explanation|linebreaks }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+
+                <!-- Score final (si activé) -->
+                {% if show_answers %}
+                <div class="score-display">
+                    <h2><i class="fas fa-trophy me-3"></i>Aperçu terminé</h2>
+                    <p class="mb-0">
+                        Dans un vrai quiz, le score et les résultats apparaîtraient ici selon vos paramètres de configuration.
+                    </p>
+                </div>
+                {% endif %}
+
+                {% else %}
+                <!-- Aucune question -->
+                <div class="text-center py-5">
+                    <i class="fas fa-exclamation-triangle fa-4x text-warning mb-3"></i>
+                    <h4>Aucune question dans ce quiz</h4>
+                    <p class="text-muted">Ajoutez des questions pour voir l'aperçu.</p>
+                    <a href="{% url 'quiz:question_create' quiz.pk %}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Ajouter une question
+                    </a>
+                </div>
+                {% endif %}
+
+                <!-- Navigation -->
+                <div class="navigation-buttons">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <button class="btn btn-outline-secondary w-100" id="prev-question" disabled>
+                                <i class="fas fa-chevron-left me-2"></i>Précédent
+                            </button>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <span class="fw-bold" id="question-counter">
+                                    Question 1 sur {{ questions.count }}
+                                </span>
+                                <div class="progress-bar-container mt-2">
+                                    <div class="progress-bar" id="question-progress" style="width: {% if questions.count > 0 %}{{ 100|div:questions.count }}%{% else %}0%{% endif %}"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <button class="btn btn-primary w-100" id="next-question" 
+                                    {% if questions.count <= 1 %}disabled{% endif %}>
+                                Suivant <i class="fas fa-chevron-right ms-2"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-3">
+            <!-- Contrôles de prévisualisation -->
+            <div class="preview-controls">
+                <h5 class="text-primary mb-3">
+                    <i class="fas fa-cogs me-2"></i>Contrôles d'aperçu
+                </h5>
+
+                <form method="get" id="preview-form">
+                    <div class="form-check mb-3">
+                        <input type="checkbox" class="form-check-input" id="show_answers" 
+                               name="show_answers" {% if show_answers %}checked{% endif %}>
+                        <label for="show_answers" class="form-check-label">
+                            Montrer les bonnes réponses
+                        </label>
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <input type="checkbox" class="form-check-input" id="show_explanations" 
+                               name="show_explanations" {% if show_explanations %}checked{% endif %}>
+                        <label for="show_explanations" class="form-check-label">
+                            Afficher les explications
+                        </label>
+                    </div>
+
+                    <div class="form-check mb-3">
+                        <input type="checkbox" class="form-check-input" id="randomize_preview" 
+                               name="randomize_preview" {% if randomize_preview %}checked{% endif %}>
+                        <label for="randomize_preview" class="form-check-label">
+                            Ordre aléatoire
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn btn-outline-primary btn-sm w-100 mb-3">
+                        <i class="fas fa-sync me-2"></i>Mettre à jour l'aperçu
+                    </button>
+                </form>
+
+                <hr>
+
+                <div class="d-grid gap-2">
+                    <a href="{% url 'quiz:quiz_detail' quiz.pk %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Retour au quiz
+                    </a>
+
+                    <a href="{% url 'quiz:quiz_edit' quiz.pk %}" class="btn btn-outline-primary">
+                        <i class="fas fa-edit me-2"></i>Modifier le quiz
+                    </a>
+
+                    {% if not quiz.is_published %}
+                    <form method="post" action="{% url 'quiz:quiz_publish' quiz.pk %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="fas fa-eye me-2"></i>Publier le quiz
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Informations sur le quiz -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-info me-2"></i>Informations
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="small">
+                        <div class="mb-2">
+                            <strong>Type:</strong> {{ quiz.get_quiz_type_display }}
+                        </div>
+                        <div class="mb-2">
+                            <strong>Difficulté:</strong> {{ quiz.get_difficulty_display|default:"Non définie" }}
+                        </div>
+                        <div class="mb-2">
+                            <strong>Tentatives:</strong> {{ quiz.max_attempts }}
+                        </div>
+                        <div class="mb-2">
+                            <strong>Score de passage:</strong> {{ quiz.passing_score }}%
+                        </div>
+                        {% if quiz.course %}
+                        <div class="mb-2">
+                            <strong>Cours:</strong> {{ quiz.course.title }}
+                        </div>
+                        {% endif %}
+                        {% if quiz.lesson %}
+                        <div>
+                            <strong>Leçon:</strong> {{ quiz.lesson.title }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const questions = document.querySelectorAll('.question-container');
+    const prevButton = document.getElementById('prev-question');
+    const nextButton = document.getElementById('next-question');
+    const questionCounter = document.getElementById('question-counter');
+    const questionProgress = document.getElementById('question-progress');
+    const totalQuestions = questions.length;
+    
+    let currentQuestion = 0;
+    
+    // Fonction pour afficher une question
+    function showQuestion(index) {
+        questions.forEach((q, i) => {
+            q.style.display = i === index ? 'block' : 'none';
+        });
+        
+        // Mise à jour des contrôles
+        prevButton.disabled = index === 0;
+        nextButton.disabled = index === totalQuestions - 1;
+        
+        if (index === totalQuestions - 1) {
+            nextButton.innerHTML = '<i class="fas fa-flag-checkered me-2"></i>Terminer';
+        } else {
+            nextButton.innerHTML = 'Suivant <i class="fas fa-chevron-right ms-2"></i>';
+        }
+        
+        // Mise à jour du compteur
+        questionCounter.textContent = `Question ${index + 1} sur ${totalQuestions}`;
+        
+        // Mise à jour de la barre de progression
+        const progress = ((index + 1) / totalQuestions) * 100;
+        questionProgress.style.width = `${progress}%`;
+    }
+    
+    // Navigation
+    prevButton?.addEventListener('click', () => {
+        if (currentQuestion > 0) {
+            currentQuestion--;
+            showQuestion(currentQuestion);
+        }
+    });
+    
+    nextButton?.addEventListener('click', () => {
+        if (currentQuestion < totalQuestions - 1) {
+            currentQuestion++;
+            showQuestion(currentQuestion);
+        } else {
+            // Simulation de soumission
+            if (confirm('Terminer l\'aperçu ?')) {
+                alert('Aperçu terminé ! Dans un vrai quiz, les résultats seraient traités ici.');
+            }
+        }
+    });
+    
+    // Navigation au clavier
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft' && !prevButton.disabled) {
+            prevButton.click();
+        } else if (e.key === 'ArrowRight' && !nextButton.disabled) {
+            nextButton.click();
+        }
+    });
+    
+    // Timer simulé (si activé)
+    {% if quiz.time_limit %}
+    let timeLeft = {{ quiz.time_limit }} * 60; // en secondes
+    const timerDisplay = document.getElementById('timer-display');
+    const progressBar = document.getElementById('progress-bar');
+    const totalTime = timeLeft;
+    
+    function updateTimer() {
+        const minutes = Math.floor(timeLeft / 60);
+        const seconds = timeLeft % 60;
+        
+        timerDisplay.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        
+        // Mise à jour de la barre de progression du timer
+        const progress = ((totalTime - timeLeft) / totalTime) * 100;
+        progressBar.style.width = `${progress}%`;
+        
+        // Changer la couleur selon le temps restant
+        if (timeLeft <= 300) { // 5 minutes
+            timerDisplay.style.background = '#dc3545';
+        } else if (timeLeft <= 600) { // 10 minutes
+            timerDisplay.style.background = '#ffc107';
+        }
+        
+        timeLeft--;
+        
+        if (timeLeft < 0) {
+            clearInterval(timerInterval);
+            alert('Temps écoulé ! Dans un vrai quiz, le formulaire serait soumis automatiquement.');
+        }
+    }
+    
+    const timerInterval = setInterval(updateTimer, 1000);
+    {% endif %}
+    
+    // Auto-submit du formulaire de contrôles
+    const previewForm = document.getElementById('preview-form');
+    const checkboxes = previewForm.querySelectorAll('input[type="checkbox"]');
+    
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', () => {
+            setTimeout(() => previewForm.submit(), 100);
+        });
+    });
+    
+    // Initialisation
+    if (totalQuestions > 0) {
+        showQuestion(currentQuestion);
+    }
+    
+    // Simulation d'interactions avec les choix
+    document.querySelectorAll('.choice-item').forEach(choice => {
+        choice.addEventListener('click', function() {
+            const input = this.querySelector('input[type="radio"], input[type="checkbox"]');
+            if (input && !input.disabled) {
+                input.checked = !input.checked;
+                
+                // Pour les radio buttons, décocher les autres
+                if (input.type === 'radio') {
+                    const name = input.name;
+                    document.querySelectorAll(`input[name="${name}"]`).forEach(radio => {
+                        const parentChoice = radio.closest('.choice-item');
+                        if (radio !== input) {
+                            radio.checked = false;
+                            parentChoice.classList.remove('selected');
+                        }
+                    });
+                }
+                
+                // Marquer visuellement le choix sélectionné
+                this.classList.toggle('selected', input.checked);
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

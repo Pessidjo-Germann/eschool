@@ -1,0 +1,639 @@
+{% extends 'instructor/base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }} - {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.choices-form {
+    background: white;
+    border-radius: 8px;
+    padding: 2rem;
+    border: 1px solid #e9ecef;
+}
+.choice-item {
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    background-color: #f8f9fa;
+    position: relative;
+    transition: all 0.3s ease;
+}
+.choice-item:hover {
+    border-color: #007bff;
+    background-color: #ffffff;
+}
+.choice-item.correct {
+    border-color: #28a745;
+    background-color: #d4edda;
+}
+.choice-item.to-delete {
+    opacity: 0.5;
+    background-color: #f8d7da;
+    border-color: #dc3545;
+}
+.choice-header {
+    display: flex;
+    justify-content-between;
+    align-items-center;
+    margin-bottom: 1rem;
+}
+.drag-handle {
+    cursor: move;
+    color: #6c757d;
+    padding: 0.25rem;
+}
+.drag-handle:hover {
+    color: #495057;
+}
+.add-choice-btn {
+    border: 2px dashed #007bff;
+    background: transparent;
+    color: #007bff;
+    padding: 1rem;
+    border-radius: 6px;
+    transition: all 0.3s;
+}
+.add-choice-btn:hover {
+    background-color: #007bff;
+    color: white;
+    border-style: solid;
+}
+.question-preview {
+    background: #e9ecef;
+    border-radius: 6px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+.form-errors {
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    border-radius: 4px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+.formset-errors {
+    color: #721c24;
+}
+.choice-validation {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    font-size: 0.8rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{% url 'instructor:dashboard' %}">Dashboard</a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'quiz:quiz_list' %}">Quiz</a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'quiz:quiz_detail' quiz.pk %}">{{ quiz.title }}</a>
+            </li>
+            <li class="breadcrumb-item active" aria-current="page">Choix de réponse</li>
+        </ol>
+    </nav>
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2>
+                <i class="fas fa-list-ul me-3 text-primary"></i>
+                Choix de réponse
+            </h2>
+            <p class="text-muted mb-0">
+                Configurez les options de réponse pour cette question
+            </p>
+        </div>
+        <a href="{% url 'quiz:quiz_detail' quiz.pk %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Retour au quiz
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <!-- Aperçu de la question -->
+            <div class="question-preview">
+                <h5 class="text-primary mb-3">
+                    <i class="fas fa-question-circle me-2"></i>Question
+                </h5>
+                <div class="fw-bold mb-2">{{ question.question_text }}</div>
+                <div class="d-flex gap-2">
+                    <span class="badge bg-primary">{{ question.get_question_type_display }}</span>
+                    <span class="badge bg-success">{{ question.points }} point{{ question.points|pluralize }}</span>
+                    {% if question.explanation %}
+                    <span class="badge bg-info">Avec explication</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Formulaire des choix -->
+            <div class="choices-form">
+                {% if formset.non_form_errors %}
+                <div class="form-errors">
+                    <div class="formset-errors">
+                        {{ formset.non_form_errors }}
+                    </div>
+                </div>
+                {% endif %}
+
+                <form method="post" id="choices-form">
+                    {% csrf_token %}
+                    {{ formset.management_form }}
+                    
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="text-primary mb-0">
+                            <i class="fas fa-check-square me-2"></i>Options de réponse
+                        </h5>
+                        <button type="button" class="btn btn-outline-success btn-sm" id="add-choice">
+                            <i class="fas fa-plus me-2"></i>Ajouter un choix
+                        </button>
+                    </div>
+
+                    <div id="choices-container">
+                        {% for form in formset %}
+                        <div class="choice-item" data-form-index="{{ forloop.counter0 }}">
+                            <div class="choice-validation">
+                                {% if form.instance.is_correct %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check"></i> Correct
+                                </span>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="choice-header">
+                                <div class="d-flex align-items-center">
+                                    <div class="drag-handle me-2">
+                                        <i class="fas fa-grip-vertical"></i>
+                                    </div>
+                                    <h6 class="mb-0">Choix {{ forloop.counter }}</h6>
+                                </div>
+                                
+                                <div class="d-flex align-items-center gap-2">
+                                    <!-- Checkbox "Correct" -->
+                                    <div class="form-check">
+                                        {{ form.is_correct }}
+                                        <label for="{{ form.is_correct.id_for_label }}" class="form-check-label">
+                                            Réponse correcte
+                                        </label>
+                                    </div>
+                                    
+                                    <!-- Bouton supprimer -->
+                                    {% if formset.can_delete %}
+                                    <div class="form-check">
+                                        {{ form.DELETE }}
+                                        <label for="{{ form.DELETE.id_for_label }}" class="form-check-label text-danger">
+                                            <i class="fas fa-trash"></i>
+                                        </label>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <!-- Champs cachés -->
+                            {{ form.id }}
+                            
+                            <!-- Texte du choix -->
+                            <div class="mb-3">
+                                <label for="{{ form.choice_text.id_for_label }}" class="form-label">
+                                    Texte du choix <span class="text-danger">*</span>
+                                </label>
+                                {{ form.choice_text }}
+                                {% if form.choice_text.errors %}
+                                    <div class="text-danger small">{{ form.choice_text.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Ordre et explication -->
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <label for="{{ form.order.id_for_label }}" class="form-label">Ordre</label>
+                                    {{ form.order }}
+                                    {% if form.order.errors %}
+                                        <div class="text-danger small">{{ form.order.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="col-md-9">
+                                    <label for="{{ form.explanation.id_for_label }}" class="form-label">
+                                        Explication (optionnelle)
+                                    </label>
+                                    {{ form.explanation }}
+                                    {% if form.explanation.errors %}
+                                        <div class="text-danger small">{{ form.explanation.errors.0 }}</div>
+                                    {% endif %}
+                                    <div class="form-text">
+                                        Explication qui s'affichera si ce choix est sélectionné
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {% if form.non_field_errors %}
+                            <div class="text-danger small mt-2">
+                                {{ form.non_field_errors }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <!-- Bouton pour ajouter d'autres choix -->
+                    <div class="text-center mb-4">
+                        <button type="button" class="btn add-choice-btn w-100" id="add-another-choice">
+                            <i class="fas fa-plus-circle me-2"></i>
+                            Ajouter un autre choix de réponse
+                        </button>
+                    </div>
+                    
+                    <!-- Actions -->
+                    <div class="d-flex gap-3">
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save me-2"></i>Sauvegarder les choix
+                        </button>
+                        
+                        <a href="{% url 'quiz:quiz_detail' quiz.pk %}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Retour au quiz
+                        </a>
+                        
+                        <button type="button" class="btn btn-outline-primary" id="preview-question">
+                            <i class="fas fa-eye me-2"></i>Prévisualiser
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <!-- Statistiques et validations -->
+            <div class="card sticky-top" style="top: 1rem;">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-info me-2"></i>Validation
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div id="validation-summary">
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between">
+                                <span>Total des choix:</span>
+                                <strong id="total-choices">{{ formset.total_form_count }}</strong>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between">
+                                <span>Réponses correctes:</span>
+                                <strong id="correct-choices">0</strong>
+                            </div>
+                        </div>
+                        
+                        <div id="validation-messages"></div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="small">
+                        <h6>Recommandations:</h6>
+                        <ul class="small">
+                            {% if question.question_type == 'multiple_choice' %}
+                            <li>Au moins 2 réponses correctes recommandées</li>
+                            <li>3-6 choix au total idéalement</li>
+                            {% elif question.question_type == 'single_choice' %}
+                            <li>Une seule réponse correcte</li>
+                            <li>3-5 choix au total recommandés</li>
+                            {% else %}
+                            <li>Exactement 2 choix (Vrai/Faux)</li>
+                            {% endif %}
+                            <li>Évitez les choix trop évidents</li>
+                            <li>Utilisez des distracteurs plausibles</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Aperçu en temps réel -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-eye me-2"></i>Aperçu
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div id="live-preview">
+                        <div class="text-muted text-center">
+                            <i class="fas fa-eye fa-2x mb-2"></i><br>
+                            L'aperçu se mettra à jour automatiquement
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Template pour nouveau choix -->
+<div id="choice-template" style="display: none;">
+    <div class="choice-item" data-form-index="__prefix__">
+        <div class="choice-validation"></div>
+        
+        <div class="choice-header">
+            <div class="d-flex align-items-center">
+                <div class="drag-handle me-2">
+                    <i class="fas fa-grip-vertical"></i>
+                </div>
+                <h6 class="mb-0">Nouveau choix</h6>
+            </div>
+            
+            <div class="d-flex align-items-center gap-2">
+                <div class="form-check">
+                    <input type="checkbox" name="__prefix__-is_correct" class="form-check-input" id="id___prefix__-is_correct">
+                    <label for="id___prefix__-is_correct" class="form-check-label">
+                        Réponse correcte
+                    </label>
+                </div>
+                
+                <div class="form-check">
+                    <input type="checkbox" name="__prefix__-DELETE" class="form-check-input" id="id___prefix__-DELETE">
+                    <label for="id___prefix__-DELETE" class="form-check-label text-danger">
+                        <i class="fas fa-trash"></i>
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <input type="hidden" name="__prefix__-id" id="id___prefix__-id">
+        
+        <div class="mb-3">
+            <label for="id___prefix__-choice_text" class="form-label">
+                Texte du choix <span class="text-danger">*</span>
+            </label>
+            <input type="text" name="__prefix__-choice_text" class="form-control" id="id___prefix__-choice_text" placeholder="Saisissez le texte du choix">
+        </div>
+        
+        <div class="row">
+            <div class="col-md-3">
+                <label for="id___prefix__-order" class="form-label">Ordre</label>
+                <input type="number" name="__prefix__-order" class="form-control" id="id___prefix__-order" min="1">
+            </div>
+            
+            <div class="col-md-9">
+                <label for="id___prefix__-explanation" class="form-label">
+                    Explication (optionnelle)
+                </label>
+                <input type="text" name="__prefix__-explanation" class="form-control" id="id___prefix__-explanation" placeholder="Explication optionnelle">
+                <div class="form-text">
+                    Explication qui s'affichera si ce choix est sélectionné
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const container = document.getElementById('choices-container');
+    const addButton = document.getElementById('add-choice');
+    const addAnotherButton = document.getElementById('add-another-choice');
+    const totalFormsInput = document.getElementById('id_form-TOTAL_FORMS');
+    const questionType = '{{ question.question_type }}';
+    
+    let formIndex = parseInt(totalFormsInput.value);
+    
+    // Rendre les choix triables
+    if (container) {
+        Sortable.create(container, {
+            handle: '.drag-handle',
+            animation: 150,
+            onEnd: function() {
+                updateChoiceNumbers();
+                updateValidation();
+                updatePreview();
+            }
+        });
+    }
+    
+    // Ajouter un nouveau choix
+    function addChoice() {
+        const template = document.getElementById('choice-template');
+        const newChoice = template.innerHTML.replace(/__prefix__/g, formIndex);
+        
+        const div = document.createElement('div');
+        div.innerHTML = newChoice;
+        const choiceElement = div.firstElementChild;
+        
+        // Définir l'ordre par défaut
+        const orderInput = choiceElement.querySelector(`[name="form-${formIndex}-order"]`);
+        if (orderInput) {
+            orderInput.value = formIndex + 1;
+        }
+        
+        container.appendChild(choiceElement);
+        
+        // Mettre à jour le nombre total de formulaires
+        formIndex++;
+        totalFormsInput.value = formIndex;
+        
+        updateChoiceNumbers();
+        updateValidation();
+        updatePreview();
+        
+        // Focus sur le nouveau champ de texte
+        const textInput = choiceElement.querySelector('[name$="-choice_text"]');
+        if (textInput) {
+            textInput.focus();
+        }
+    }
+    
+    // Event listeners pour ajouter des choix
+    if (addButton) addButton.addEventListener('click', addChoice);
+    if (addAnotherButton) addAnotherButton.addEventListener('click', addChoice);
+    
+    // Gestion des suppressions
+    container.addEventListener('change', function(e) {
+        if (e.target.name && e.target.name.includes('-DELETE')) {
+            const choiceItem = e.target.closest('.choice-item');
+            if (e.target.checked) {
+                choiceItem.classList.add('to-delete');
+            } else {
+                choiceItem.classList.remove('to-delete');
+            }
+        }
+        
+        if (e.target.name && e.target.name.includes('-is_correct')) {
+            const choiceItem = e.target.closest('.choice-item');
+            if (e.target.checked) {
+                choiceItem.classList.add('correct');
+                const validation = choiceItem.querySelector('.choice-validation');
+                validation.innerHTML = '<span class="badge bg-success"><i class="fas fa-check"></i> Correct</span>';
+            } else {
+                choiceItem.classList.remove('correct');
+                const validation = choiceItem.querySelector('.choice-validation');
+                validation.innerHTML = '';
+            }
+            
+            // Pour les questions à choix unique, décocher les autres
+            if (questionType === 'single_choice' && e.target.checked) {
+                document.querySelectorAll('[name$="-is_correct"]').forEach(input => {
+                    if (input !== e.target) {
+                        input.checked = false;
+                        const otherItem = input.closest('.choice-item');
+                        otherItem.classList.remove('correct');
+                        const otherValidation = otherItem.querySelector('.choice-validation');
+                        otherValidation.innerHTML = '';
+                    }
+                });
+            }
+        }
+        
+        updateValidation();
+        updatePreview();
+    });
+    
+    // Mise à jour des numéros de choix
+    function updateChoiceNumbers() {
+        const choices = container.querySelectorAll('.choice-item:not(.to-delete)');
+        choices.forEach((choice, index) => {
+            const header = choice.querySelector('h6');
+            if (header) {
+                header.textContent = `Choix ${index + 1}`;
+            }
+        });
+    }
+    
+    // Mise à jour de la validation
+    function updateValidation() {
+        const totalChoices = container.querySelectorAll('.choice-item:not(.to-delete)').length;
+        const correctChoices = container.querySelectorAll('[name$="-is_correct"]:checked').length;
+        
+        document.getElementById('total-choices').textContent = totalChoices;
+        document.getElementById('correct-choices').textContent = correctChoices;
+        
+        const messagesDiv = document.getElementById('validation-messages');
+        let messages = [];
+        
+        if (totalChoices < 2) {
+            messages.push('<div class="alert alert-warning alert-sm py-2">Au moins 2 choix requis</div>');
+        }
+        
+        if (correctChoices === 0) {
+            messages.push('<div class="alert alert-danger alert-sm py-2">Aucune réponse correcte définie</div>');
+        } else if (questionType === 'single_choice' && correctChoices > 1) {
+            messages.push('<div class="alert alert-warning alert-sm py-2">Une seule réponse correcte autorisée</div>');
+        } else if (questionType === 'true_false' && totalChoices !== 2) {
+            messages.push('<div class="alert alert-info alert-sm py-2">Exactement 2 choix requis pour Vrai/Faux</div>');
+        }
+        
+        if (messages.length === 0) {
+            messages.push('<div class="alert alert-success alert-sm py-2"><i class="fas fa-check me-2"></i>Configuration valide</div>');
+        }
+        
+        messagesDiv.innerHTML = messages.join('');
+    }
+    
+    // Mise à jour de l'aperçu
+    function updatePreview() {
+        const previewDiv = document.getElementById('live-preview');
+        const choices = container.querySelectorAll('.choice-item:not(.to-delete)');
+        
+        if (choices.length === 0) {
+            previewDiv.innerHTML = `
+                <div class="text-muted text-center">
+                    <i class="fas fa-eye fa-2x mb-2"></i><br>
+                    Ajoutez des choix pour voir l'aperçu
+                </div>
+            `;
+            return;
+        }
+        
+        let previewHTML = `
+            <div class="fw-bold mb-3">{{ question.question_text }}</div>
+        `;
+        
+        choices.forEach((choice, index) => {
+            const textInput = choice.querySelector('[name$="-choice_text"]');
+            const isCorrectInput = choice.querySelector('[name$="-is_correct"]');
+            const text = textInput ? textInput.value : `Choix ${index + 1}`;
+            const isCorrect = isCorrectInput ? isCorrectInput.checked : false;
+            
+            const inputType = questionType === 'single_choice' ? 'radio' : 'checkbox';
+            const bgClass = isCorrect ? 'bg-success text-white' : '';
+            
+            previewHTML += `
+                <div class="form-check mb-2">
+                    <input type="${inputType}" class="form-check-input" disabled>
+                    <label class="form-check-label ${bgClass} px-2 py-1 rounded">
+                        ${text || `Choix ${index + 1}`}
+                        ${isCorrect ? ' <i class="fas fa-check small"></i>' : ''}
+                    </label>
+                </div>
+            `;
+        });
+        
+        previewDiv.innerHTML = previewHTML;
+    }
+    
+    // Event listeners pour mise à jour temps réel
+    container.addEventListener('input', function(e) {
+        if (e.target.name && e.target.name.includes('-choice_text')) {
+            updatePreview();
+        }
+    });
+    
+    // Validation du formulaire
+    document.getElementById('choices-form').addEventListener('submit', function(e) {
+        const totalChoices = container.querySelectorAll('.choice-item:not(.to-delete)').length;
+        const correctChoices = container.querySelectorAll('[name$="-is_correct"]:checked').length;
+        
+        if (totalChoices < 2) {
+            e.preventDefault();
+            alert('Au moins 2 choix de réponse sont requis.');
+            return;
+        }
+        
+        if (correctChoices === 0) {
+            e.preventDefault();
+            alert('Au moins une réponse correcte doit être définie.');
+            return;
+        }
+        
+        if (questionType === 'single_choice' && correctChoices > 1) {
+            e.preventDefault();
+            alert('Une seule réponse correcte est autorisée pour ce type de question.');
+            return;
+        }
+        
+        // Vérifier que tous les choix ont du texte
+        const emptyChoices = [];
+        container.querySelectorAll('.choice-item:not(.to-delete)').forEach((choice, index) => {
+            const textInput = choice.querySelector('[name$="-choice_text"]');
+            if (!textInput || !textInput.value.trim()) {
+                emptyChoices.push(index + 1);
+            }
+        });
+        
+        if (emptyChoices.length > 0) {
+            e.preventDefault();
+            alert(`Les choix suivants sont vides: ${emptyChoices.join(', ')}`);
+            return;
+        }
+    });
+    
+    // Initialisation
+    updateChoiceNumbers();
+    updateValidation();
+    updatePreview();
+});
+</script>
+{% endblock %}
