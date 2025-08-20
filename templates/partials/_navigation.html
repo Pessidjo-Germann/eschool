@@ -41,6 +41,22 @@
                     </ul>
                 </li>
 
+                <!-- Assistant virtuel -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link modern-link dropdown-toggle" href="{% url 'assistant:chat' %}" id="assistantMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="bi bi-robot me-1"></i>
+                        Assistant
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{% url 'assistant:chat' %}">
+                            <i class="bi bi-chat-dots me-2"></i>Chat en direct
+                        </a></li>
+                        <li><a class="dropdown-item" href="{% url 'assistant:faq' %}">
+                            <i class="bi bi-question-circle me-2"></i>FAQ
+                        </a></li>
+                    </ul>
+                </li>
+
                 {% if user.is_authenticated %}
                     {% if user.is_instructor %}
                         <li class="nav-item dropdown">

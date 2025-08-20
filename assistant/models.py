@@ -187,7 +187,7 @@ class AssistantConfiguration(models.Model):
     # Configuration API
     api_key = models.CharField(
         max_length=200,
-        help_text="Clé API Gemini"
+        help_text="AIzaSyC3cdxJrrEZ15dhj6TeU9hbEh2stAXeI2E"
     )
     model = models.CharField(
         max_length=50,

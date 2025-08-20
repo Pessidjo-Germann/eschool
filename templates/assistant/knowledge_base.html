@@ -1,0 +1,320 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Foire aux Questions - {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.faq-container {
+    max-width: 1000px;
+    margin: 2rem auto;
+}
+
+.faq-header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.faq-header h1 {
+    color: #333;
+    margin-bottom: 1rem;
+}
+
+.faq-header p {
+    color: #6c757d;
+    font-size: 1.1rem;
+}
+
+.search-section {
+    background: #f8f9fa;
+    padding: 2rem;
+    border-radius: 12px;
+    margin-bottom: 2rem;
+}
+
+.search-form {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.search-input {
+    flex: 1;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    padding: 0.75rem;
+}
+
+.search-button {
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0.75rem 1.5rem;
+    cursor: pointer;
+}
+
+.category-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.category-filter {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    padding: 0.5rem 1rem;
+    text-decoration: none;
+    color: #6c757d;
+    transition: all 0.3s;
+}
+
+.category-filter:hover,
+.category-filter.active {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+    text-decoration: none;
+}
+
+.faq-items {
+    display: grid;
+    gap: 1rem;
+}
+
+.faq-item {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: all 0.3s;
+}
+
+.faq-item:hover {
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.faq-question {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    margin: 0;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: none;
+    width: 100%;
+    text-align: left;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.faq-question:hover {
+    background: #e9ecef;
+}
+
+.faq-answer {
+    padding: 1.5rem;
+    border-top: 1px solid #e9ecef;
+    line-height: 1.6;
+}
+
+.category-badge {
+    background: #007bff;
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    display: inline-block;
+}
+
+.usage-stats {
+    color: #6c757d;
+    font-size: 0.85rem;
+    margin-top: 1rem;
+}
+
+.no-results {
+    text-align: center;
+    padding: 3rem;
+    color: #6c757d;
+}
+
+.collapse-icon {
+    transition: transform 0.3s;
+}
+
+.collapsed .collapse-icon {
+    transform: rotate(180deg);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .search-form {
+        flex-direction: column;
+    }
+    
+    .category-filters {
+        justify-content: center;
+    }
+    
+    .faq-question {
+        padding: 1rem;
+    }
+    
+    .faq-answer {
+        padding: 1rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="faq-container">
+        <!-- En-tête -->
+        <div class="faq-header">
+            <h1><i class="bi bi-question-circle me-3"></i>Foire aux Questions</h1>
+            <p>Trouvez rapidement des réponses à vos questions les plus fréquentes</p>
+        </div>
+
+        <!-- Section de recherche -->
+        <div class="search-section">
+            <form method="get" class="search-form">
+                <input 
+                    type="text" 
+                    name="q" 
+                    class="search-input" 
+                    placeholder="Rechercher dans la FAQ..."
+                    value="{{ search_query }}"
+                >
+                <button type="submit" class="search-button">
+                    <i class="bi bi-search"></i> Rechercher
+                </button>
+            </form>
+
+            <!-- Filtres par catégorie -->
+            <div class="category-filters">
+                <a href="{% url 'assistant:faq' %}" 
+                   class="category-filter {% if not current_category %}active{% endif %}">
+                    Toutes
+                </a>
+                {% for category in categories %}
+                <a href="{% url 'assistant:faq' %}?category={{ category }}" 
+                   class="category-filter {% if current_category == category %}active{% endif %}">
+                    {{ category|title }}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Liste des questions/réponses -->
+        {% if entries %}
+        <div class="faq-items">
+            {% for entry in entries %}
+            <div class="faq-item">
+                <div class="category-badge">{{ entry.get_category_display }}</div>
+                
+                <button class="faq-question collapsed" 
+                        type="button" 
+                        data-bs-toggle="collapse" 
+                        data-bs-target="#faq-{{ forloop.counter }}"
+                        aria-expanded="false">
+                    <span>{{ entry.question }}</span>
+                    <i class="bi bi-chevron-down collapse-icon"></i>
+                </button>
+                
+                <div class="collapse" id="faq-{{ forloop.counter }}">
+                    <div class="faq-answer">
+                        {{ entry.answer|linebreaks }}
+                        
+                        {% if entry.usage_count > 0 %}
+                        <div class="usage-stats">
+                            <i class="bi bi-eye"></i> 
+                            Consulté {{ entry.usage_count }} fois
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="no-results">
+            <i class="bi bi-search" style="font-size: 3rem; color: #ddd;"></i>
+            <h4>Aucun résultat trouvé</h4>
+            <p>Essayez avec d'autres mots-clés ou parcourez toutes les catégories.</p>
+            
+            {% if search_query or current_category %}
+            <a href="{% url 'assistant:faq' %}" class="btn btn-primary">
+                Voir toutes les questions
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Lien vers l'assistant -->
+        <div class="text-center mt-5">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">
+                        <i class="bi bi-robot me-2"></i>
+                        Besoin d'aide personnalisée ?
+                    </h5>
+                    <p class="card-text">
+                        Notre assistant virtuel peut répondre à vos questions spécifiques
+                        et vous aider en temps réel.
+                    </p>
+                    <a href="{% url 'assistant:chat' %}" class="btn btn-primary">
+                        <i class="bi bi-chat-dots me-2"></i>
+                        Discuter avec l'assistant
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Gestion des icônes de collapse
+    const collapseElements = document.querySelectorAll('[data-bs-toggle="collapse"]');
+    
+    collapseElements.forEach(element => {
+        const targetId = element.getAttribute('data-bs-target');
+        const target = document.querySelector(targetId);
+        
+        if (target) {
+            target.addEventListener('show.bs.collapse', function() {
+                element.classList.remove('collapsed');
+            });
+            
+            target.addEventListener('hide.bs.collapse', function() {
+                element.classList.add('collapsed');
+            });
+        }
+    });
+    
+    // Auto-scroll vers la question si recherche spécifique
+    const urlParams = new URLSearchParams(window.location.search);
+    const searchQuery = urlParams.get('q');
+    
+    if (searchQuery && searchQuery.length > 3) {
+        // Ouvrir automatiquement les résultats de recherche
+        setTimeout(() => {
+            const firstResult = document.querySelector('.faq-question');
+            if (firstResult) {
+                firstResult.click();
+                firstResult.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }, 500);
+    }
+});
+</script>
+{% endblock %}
