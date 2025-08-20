@@ -1,0 +1,412 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Échec de paiement - {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.failure-container {
+    max-width: 800px;
+    margin: 3rem auto;
+}
+.failure-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+.failure-header {
+    background: linear-gradient(135deg, #dc3545, #e74c3c);
+    color: white;
+    padding: 3rem 2rem 2rem;
+    text-align: center;
+}
+.failure-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    animation: shake 0.8s ease-in-out;
+}
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+.failure-body {
+    padding: 2rem;
+}
+.error-details {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+}
+.troubleshooting {
+    background: #e3f2fd;
+    border-left: 4px solid #2196f3;
+    padding: 1.5rem;
+    border-radius: 0 8px 8px 0;
+    margin: 1.5rem 0;
+}
+.solution-step {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 3px solid #007bff;
+}
+.solution-step:last-child {
+    margin-bottom: 0;
+}
+.step-number {
+    background: #007bff;
+    color: white;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: bold;
+    margin-right: 1rem;
+    flex-shrink: 0;
+    margin-top: 0.2rem;
+}
+.action-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+.support-info {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border-radius: 8px;
+    padding: 2rem;
+    margin-top: 2rem;
+    text-align: center;
+}
+.error-code {
+    font-family: 'Courier New', monospace;
+    background: #f1f3f4;
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+@media (max-width: 768px) {
+    .action-buttons {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="failure-container">
+        <div class="failure-card">
+            <div class="failure-header">
+                <div class="failure-icon">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                </div>
+                
+                <h1 class="h3 mb-3">Échec du paiement</h1>
+                
+                <p class="mb-0">
+                    Nous n'avons pas pu traiter votre paiement pour le cours 
+                    <strong>{{ transaction.description }}</strong>
+                </p>
+            </div>
+            
+            <div class="failure-body">
+                <!-- Détails de l'erreur -->
+                <div class="error-details">
+                    <h6 class="mb-3">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Détails de l'erreur
+                    </h6>
+                    
+                    {% if transaction.error_code %}
+                    <div class="mb-2">
+                        <strong>Code d'erreur:</strong> 
+                        <span class="error-code">{{ transaction.error_code }}</span>
+                    </div>
+                    {% endif %}
+                    
+                    {% if transaction.error_message %}
+                    <div class="mb-2">
+                        <strong>Message:</strong> {{ transaction.error_message }}
+                    </div>
+                    {% endif %}
+                    
+                    <div class="mb-2">
+                        <strong>Référence de transaction:</strong> {{ transaction.reference }}
+                    </div>
+                    
+                    <div class="mb-2">
+                        <strong>Montant:</strong> {{ transaction.amount|floatformat:0 }} {{ transaction.currency }}
+                    </div>
+                    
+                    {% if transaction.payment_method %}
+                    <div class="mb-2">
+                        <strong>Méthode de paiement:</strong> {{ transaction.get_payment_method_display }}
+                    </div>
+                    {% endif %}
+                    
+                    <div>
+                        <strong>Heure de la tentative:</strong> {{ transaction.created_at|date:"d/m/Y à H:i" }}
+                    </div>
+                </div>
+                
+                <!-- Solutions possibles -->
+                <div class="troubleshooting">
+                    <h6 class="mb-3">
+                        <i class="bi bi-tools me-2"></i>
+                        Solutions possibles
+                    </h6>
+                    
+                    {% if transaction.error_code == 'INSUFFICIENT_FUNDS' %}
+                    <div class="solution-step">
+                        <div class="step-number">1</div>
+                        <div>
+                            <strong>Vérifiez votre solde</strong><br>
+                            Assurez-vous que votre compte {{ transaction.get_payment_method_display }} dispose de fonds suffisants pour effectuer le paiement.
+                        </div>
+                    </div>
+                    <div class="solution-step">
+                        <div class="step-number">2</div>
+                        <div>
+                            <strong>Rechargez votre compte</strong><br>
+                            Ajoutez des fonds à votre compte mobile money et réessayez le paiement.
+                        </div>
+                    </div>
+                    
+                    {% elif transaction.error_code == 'INVALID_CARD' %}
+                    <div class="solution-step">
+                        <div class="step-number">1</div>
+                        <div>
+                            <strong>Vérifiez les informations de votre carte</strong><br>
+                            Assurez-vous que le numéro, la date d'expiration et le code CVV sont corrects.
+                        </div>
+                    </div>
+                    <div class="solution-step">
+                        <div class="step-number">2</div>
+                        <div>
+                            <strong>Contactez votre banque</strong><br>
+                            Votre banque peut avoir bloqué la transaction. Contactez-les pour autoriser le paiement.
+                        </div>
+                    </div>
+                    
+                    {% elif transaction.error_code == 'NETWORK_ERROR' %}
+                    <div class="solution-step">
+                        <div class="step-number">1</div>
+                        <div>
+                            <strong>Vérifiez votre connexion internet</strong><br>
+                            Assurez-vous d'avoir une connexion stable et réessayez.
+                        </div>
+                    </div>
+                    <div class="solution-step">
+                        <div class="step-number">2</div>
+                        <div>
+                            <strong>Patientez quelques minutes</strong><br>
+                            Il peut y avoir un problème temporaire avec le service de paiement.
+                        </div>
+                    </div>
+                    
+                    {% else %}
+                    <!-- Solutions génériques -->
+                    <div class="solution-step">
+                        <div class="step-number">1</div>
+                        <div>
+                            <strong>Vérifiez vos informations de paiement</strong><br>
+                            Assurez-vous que toutes les informations saisies sont correctes (numéro de téléphone, carte bancaire, etc.).
+                        </div>
+                    </div>
+                    <div class="solution-step">
+                        <div class="step-number">2</div>
+                        <div>
+                            <strong>Essayez une autre méthode de paiement</strong><br>
+                            Si vous avez utilisé MTN Money, essayez Orange Money ou une carte bancaire.
+                        </div>
+                    </div>
+                    <div class="solution-step">
+                        <div class="step-number">3</div>
+                        <div>
+                            <strong>Vérifiez votre solde ou limite</strong><br>
+                            Assurez-vous d'avoir suffisamment de fonds et que vos limites de transaction permettent ce paiement.
+                        </div>
+                    </div>
+                    <div class="solution-step">
+                        <div class="step-number">4</div>
+                        <div>
+                            <strong>Réessayez dans quelques minutes</strong><br>
+                            Il peut s'agir d'un problème temporaire avec le service de paiement.
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Boutons d'action -->
+                <div class="action-buttons">
+                    <a href="{% url 'payments:course_payment' transaction.object_id %}" class="btn btn-primary">
+                        <i class="bi bi-arrow-clockwise me-2"></i>
+                        Réessayer le paiement
+                    </a>
+                    <a href="{% url 'payments:course_order_summary' transaction.object_id %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left me-2"></i>
+                        Modifier la commande
+                    </a>
+                </div>
+                
+                <!-- Boutons supplémentaires -->
+                <div class="row mt-3">
+                    <div class="col-md-4">
+                        <a href="{% url 'courses:course_detail' transaction.object_id %}" class="btn btn-outline-info w-100">
+                            <i class="bi bi-book me-2"></i>
+                            Voir le cours
+                        </a>
+                    </div>
+                    <div class="col-md-4">
+                        <a href="{% url 'payments:user_transactions' %}" class="btn btn-outline-info w-100">
+                            <i class="bi bi-list me-2"></i>
+                            Mes transactions
+                        </a>
+                    </div>
+                    <div class="col-md-4">
+                        <a href="{% url 'courses:courses_list' %}" class="btn btn-outline-secondary w-100">
+                            <i class="bi bi-grid me-2"></i>
+                            Autres cours
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Informations de support -->
+        <div class="support-info">
+            <h5 class="mb-3">
+                <i class="bi bi-headset me-2"></i>
+                Besoin d'aide ?
+            </h5>
+            <p class="mb-3">
+                Notre équipe support est là pour vous aider à résoudre ce problème.
+            </p>
+            <div class="row">
+                <div class="col-md-4 text-center mb-3">
+                    <i class="bi bi-envelope-fill text-primary" style="font-size: 2rem;"></i>
+                    <div class="mt-2">
+                        <strong>Email</strong><br>
+                        <a href="mailto:support@eschool.com">support@eschool.com</a>
+                    </div>
+                </div>
+                <div class="col-md-4 text-center mb-3">
+                    <i class="bi bi-telephone-fill text-success" style="font-size: 2rem;"></i>
+                    <div class="mt-2">
+                        <strong>Téléphone</strong><br>
+                        <a href="tel:+237123456789">+237 123 456 789</a>
+                    </div>
+                </div>
+                <div class="col-md-4 text-center mb-3">
+                    <i class="bi bi-chat-dots-fill text-info" style="font-size: 2rem;"></i>
+                    <div class="mt-2">
+                        <strong>Chat en direct</strong><br>
+                        <button class="btn btn-sm btn-outline-info" onclick="openLiveChat()">
+                            Démarrer le chat
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-3">
+                <small class="text-muted">
+                    <i class="bi bi-clock me-1"></i>
+                    Support disponible 24h/7j - Temps de réponse moyen: 2 heures
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Animation des étapes de solution
+    const solutionSteps = document.querySelectorAll('.solution-step');
+    solutionSteps.forEach((step, index) => {
+        step.style.opacity = '0';
+        step.style.transform = 'translateX(-20px)';
+        setTimeout(() => {
+            step.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            step.style.opacity = '1';
+            step.style.transform = 'translateX(0)';
+        }, index * 200);
+    });
+    
+    // Tracker l'événement d'échec pour l'analytique
+    if (typeof gtag !== 'undefined') {
+        gtag('event', 'payment_failed', {
+            'transaction_id': '{{ transaction.reference }}',
+            'error_code': '{{ transaction.error_code|default:"unknown" }}',
+            'payment_method': '{{ transaction.payment_method|default:"unknown" }}',
+            'amount': {{ transaction.amount|default:0 }},
+            'currency': '{{ transaction.currency|default:"XAF" }}'
+        });
+    }
+    
+    // Auto-retry après 30 secondes si erreur réseau
+    {% if transaction.error_code == 'NETWORK_ERROR' %}
+    let countdownElement = document.createElement('div');
+    countdownElement.className = 'alert alert-info mt-3';
+    countdownElement.innerHTML = `
+        <i class="bi bi-info-circle me-2"></i>
+        Nouvelle tentative automatique dans <span id="countdown">30</span> secondes...
+        <button class="btn btn-sm btn-outline-info ms-3" onclick="cancelAutoRetry()">Annuler</button>
+    `;
+    document.querySelector('.action-buttons').after(countdownElement);
+    
+    let countdown = 30;
+    const countdownInterval = setInterval(() => {
+        countdown--;
+        const countdownSpan = document.getElementById('countdown');
+        if (countdownSpan) {
+            countdownSpan.textContent = countdown;
+        }
+        
+        if (countdown <= 0) {
+            clearInterval(countdownInterval);
+            window.location.href = "{% url 'payments:course_payment' transaction.object_id %}";
+        }
+    }, 1000);
+    
+    window.cancelAutoRetry = function() {
+        clearInterval(countdownInterval);
+        countdownElement.remove();
+    };
+    {% endif %}
+});
+
+// Fonction pour ouvrir le chat en direct
+function openLiveChat() {
+    // Ici, vous pouvez intégrer votre système de chat (Intercom, Zendesk, etc.)
+    alert('Fonctionnalité de chat en direct à implémenter');
+}
+
+// Fonction pour copier la référence de transaction
+function copyTransactionRef() {
+    const ref = '{{ transaction.reference }}';
+    navigator.clipboard.writeText(ref).then(() => {
+        // Afficher une confirmation
+        const button = event.target;
+        const originalText = button.textContent;
+        button.textContent = 'Copié !';
+        button.classList.add('btn-success');
+        setTimeout(() => {
+            button.textContent = originalText;
+            button.classList.remove('btn-success');
+        }, 2000);
+    });
+}
+</script>
+{% endblock %}

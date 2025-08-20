@@ -13,8 +13,46 @@
 {% block extra_css %}
 <style>
 .result-container {
-    max-width: 600px;
+    max-width: 800px;
     margin: 3rem auto;
+}
+.checkout-steps {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 3rem;
+    padding: 0;
+    list-style: none;
+}
+.checkout-step {
+    display: flex;
+    align-items: center;
+    position: relative;
+}
+.step-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #e9ecef;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin-right: 0.5rem;
+}
+.checkout-step.completed .step-circle {
+    background: #28a745;
+    color: white;
+}
+.checkout-step.active .step-circle {
+    background: #007bff;
+    color: white;
+}
+@media (max-width: 768px) {
+    .checkout-steps {
+        display: none;
+    }
 }
 .result-card {
     background: white;
@@ -70,6 +108,34 @@
 {% block content %}
 <div class="container">
     <div class="result-container">
+        <!-- Étapes du processus -->
+        <ul class="checkout-steps">
+            <li class="checkout-step completed">
+                <div class="step-circle">
+                    <i class="bi bi-check"></i>
+                </div>
+                <span>Résumé</span>
+            </li>
+            <div style="width: 60px; height: 2px; background: #28a745; margin: 0 1rem;"></div>
+            <li class="checkout-step completed">
+                <div class="step-circle">
+                    <i class="bi bi-check"></i>
+                </div>
+                <span>Paiement</span>
+            </li>
+            <div style="width: 60px; height: 2px; background: {% if is_success %}#28a745{% else %}#e9ecef{% endif %}; margin: 0 1rem;"></div>
+            <li class="checkout-step {% if is_success %}completed{% else %}active{% endif %}">
+                <div class="step-circle">
+                    {% if is_success %}
+                        <i class="bi bi-check"></i>
+                    {% else %}
+                        3
+                    {% endif %}
+                </div>
+                <span>Confirmation</span>
+            </li>
+        </ul>
+
         <div class="result-card">
             <div class="result-header {% if is_success %}success{% elif transaction.status == 'cancelled' %}warning{% else %}error{% endif %}">
                 <div class="result-icon">
@@ -219,9 +285,9 @@
                         </a>
                         {% endif %}
                         
-                        <a href="{% url 'payments:transaction_detail' transaction.id %}" class="btn btn-outline-info">
-                            <i class="bi bi-info-circle me-2"></i>
-                            Détails complets
+                        <a href="{% url 'payments:payment_failure' transaction.id %}" class="btn btn-outline-info">
+                            <i class="bi bi-question-circle me-2"></i>
+                            Aide détaillée
                         </a>
                         
                         <a href="{% url 'courses:courses_list' %}" class="btn btn-outline-secondary">

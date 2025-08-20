@@ -89,6 +89,30 @@ def initiate_payment(request):
 
 
 @login_required
+def course_order_summary(request, course_id):
+    """Vue pour afficher le résumé de commande avant paiement"""
+    course = get_object_or_404(Course, id=course_id)
+    
+    # Vérifier si l'utilisateur n'est pas déjà inscrit
+    if request.user.enrolled_courses.filter(id=course.id).exists():
+        messages.info(request, "Vous êtes déjà inscrit à ce cours")
+        return redirect('courses:course_detail', course_id=course.id)
+    
+    # Vérifier si le cours est gratuit
+    if course.price == 0:
+        # Inscription directe pour les cours gratuits
+        course.enrollments.create(user=request.user)
+        messages.success(request, f"Vous êtes maintenant inscrit au cours {course.title}")
+        return redirect('courses:course_detail', course_id=course.id)
+    
+    context = {
+        'course': course,
+        'payment_config': PaymentConfiguration.get_active_config()
+    }
+    return render(request, 'payments/order_summary.html', context)
+
+
+@login_required
 def course_payment(request, course_id):
     """Vue spécialisée pour le paiement d'un cours"""
     course = get_object_or_404(Course, id=course_id)
@@ -141,9 +165,11 @@ def course_payment(request, course_id):
                     return redirect(authorization_url)
                 else:
                     messages.error(request, "URL d'autorisation non reçue")
+                    return redirect('payments:payment_failure', transaction_id=transaction.id)
             else:
                 error_message = response_data.get('message', 'Erreur lors de l\'initialisation du paiement')
                 messages.error(request, error_message)
+                return redirect('payments:payment_failure', transaction_id=transaction.id)
                 
         except Exception as e:
             logger.error(f"Erreur lors du paiement du cours {course_id}: {e}")
@@ -204,6 +230,73 @@ def payment_cancelled(request, transaction_id):
         'is_success': False
     }
     return render(request, 'payments/payment_result.html', context)
+
+
+@login_required
+def payment_failure(request, transaction_id):
+    """Vue détaillée pour les échecs de paiement"""
+    transaction = get_object_or_404(PaymentTransaction, id=transaction_id, user=request.user)
+    
+    # Vérifier que la transaction a effectivement échoué
+    if not transaction.is_failed:
+        return redirect('payments:payment_success', transaction_id=transaction.id)
+    
+    # Mettre à jour le statut avec Notchpay pour avoir les dernières informations
+    notchpay_service = get_notchpay_service()
+    notchpay_service.update_transaction_status(transaction)
+    
+    # Analyser le type d'erreur pour proposer des solutions appropriées
+    error_suggestions = _get_error_suggestions(transaction)
+    
+    context = {
+        'transaction': transaction,
+        'error_suggestions': error_suggestions,
+        'is_success': False
+    }
+    return render(request, 'payments/payment_failure.html', context)
+
+
+def _get_error_suggestions(transaction):
+    """Générer des suggestions basées sur le type d'erreur"""
+    suggestions = []
+    
+    error_code = transaction.error_code or ''
+    error_message = transaction.error_message or ''
+    
+    # Analyser les codes d'erreur courants
+    if 'insufficient' in error_message.lower() or 'funds' in error_message.lower():
+        suggestions.extend([
+            "Vérifiez le solde de votre compte mobile money",
+            "Rechargez votre compte et réessayez",
+            "Essayez une autre méthode de paiement"
+        ])
+    elif 'invalid' in error_message.lower() or 'card' in error_message.lower():
+        suggestions.extend([
+            "Vérifiez les informations de votre carte bancaire",
+            "Assurez-vous que votre carte n'a pas expiré",
+            "Contactez votre banque pour autoriser la transaction"
+        ])
+    elif 'network' in error_message.lower() or 'timeout' in error_message.lower():
+        suggestions.extend([
+            "Vérifiez votre connexion internet",
+            "Réessayez dans quelques minutes",
+            "Utilisez une connexion plus stable"
+        ])
+    elif 'blocked' in error_message.lower() or 'restricted' in error_message.lower():
+        suggestions.extend([
+            "Contactez votre fournisseur de paiement",
+            "Vérifiez les limites de votre compte",
+            "Essayez une autre méthode de paiement"
+        ])
+    else:
+        # Suggestions génériques
+        suggestions.extend([
+            "Vérifiez vos informations de paiement",
+            "Essayez une autre méthode de paiement",
+            "Contactez notre support si le problème persiste"
+        ])
+    
+    return suggestions
 
 
 @login_required

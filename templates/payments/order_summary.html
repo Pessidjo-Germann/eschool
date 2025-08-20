@@ -1,0 +1,422 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Résumé de commande - {{ course.title }} - {{ block.super }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.checkout-container {
+    max-width: 1000px;
+    margin: 2rem auto;
+}
+.checkout-steps {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 3rem;
+    padding: 0;
+    list-style: none;
+}
+.checkout-step {
+    display: flex;
+    align-items: center;
+    position: relative;
+}
+.checkout-step:not(:last-child):after {
+    content: '';
+    width: 60px;
+    height: 2px;
+    background: #e9ecef;
+    margin: 0 1rem;
+}
+.checkout-step.active:not(:last-child):after {
+    background: #007bff;
+}
+.checkout-step.completed:not(:last-child):after {
+    background: #28a745;
+}
+.step-circle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #e9ecef;
+    color: #6c757d;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin-right: 0.5rem;
+}
+.checkout-step.active .step-circle {
+    background: #007bff;
+    color: white;
+}
+.checkout-step.completed .step-circle {
+    background: #28a745;
+    color: white;
+}
+.order-summary-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    overflow: hidden;
+    margin-bottom: 2rem;
+}
+.course-preview {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem;
+}
+.order-details {
+    padding: 2rem;
+}
+.price-breakdown {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+}
+.price-row {
+    display: flex;
+    justify-content: between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+.price-row:last-child {
+    margin-bottom: 0;
+    padding-top: 0.75rem;
+    border-top: 2px solid #dee2e6;
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+.security-badge {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    display: inline-flex;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+.course-benefits {
+    background: #e3f2fd;
+    border-left: 4px solid #2196f3;
+    padding: 1.5rem;
+    border-radius: 0 8px 8px 0;
+    margin: 1.5rem 0;
+}
+.benefit-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+.benefit-item:last-child {
+    margin-bottom: 0;
+}
+.benefit-icon {
+    color: #2196f3;
+    margin-right: 0.75rem;
+    font-size: 1.2rem;
+}
+.instructor-info {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+}
+.action-buttons {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+@media (max-width: 768px) {
+    .action-buttons {
+        grid-template-columns: 1fr;
+    }
+    .checkout-steps {
+        display: none;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="checkout-container">
+        <!-- Étapes du processus -->
+        <ul class="checkout-steps">
+            <li class="checkout-step active">
+                <div class="step-circle">1</div>
+                <span>Résumé</span>
+            </li>
+            <li class="checkout-step">
+                <div class="step-circle">2</div>
+                <span>Paiement</span>
+            </li>
+            <li class="checkout-step">
+                <div class="step-circle">3</div>
+                <span>Confirmation</span>
+            </li>
+        </ul>
+
+        <div class="row">
+            <!-- Résumé de commande principal -->
+            <div class="col-lg-8">
+                <div class="order-summary-card">
+                    <div class="course-preview">
+                        <div class="row align-items-center">
+                            <div class="col-md-8">
+                                <h2 class="h4 mb-2">{{ course.title }}</h2>
+                                <p class="mb-2 opacity-75">{{ course.description|truncatewords:25 }}</p>
+                                <div class="d-flex align-items-center">
+                                    <span class="badge bg-light text-dark me-2">
+                                        {{ course.get_level_display }}
+                                    </span>
+                                    <span class="badge bg-light text-dark">
+                                        {{ course.language }}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="col-md-4 text-md-end">
+                                {% if course.thumbnail %}
+                                <img src="{{ course.thumbnail.url }}" 
+                                     alt="{{ course.title }}" 
+                                     class="img-fluid rounded" 
+                                     style="max-height: 120px;">
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="order-details">
+                        <!-- Informations sur l'instructeur -->
+                        <div class="instructor-info">
+                            <h6 class="mb-3">
+                                <i class="bi bi-person-fill-gear me-2"></i>
+                                Votre instructeur
+                            </h6>
+                            <div class="d-flex align-items-center">
+                                <div class="me-3">
+                                    {% if course.instructor.avatar %}
+                                    <img src="{{ course.instructor.avatar.url }}" 
+                                         alt="{{ course.instructor.get_full_name }}"
+                                         class="rounded-circle"
+                                         style="width: 50px; height: 50px; object-fit: cover;">
+                                    {% else %}
+                                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center"
+                                         style="width: 50px; height: 50px;">
+                                        {{ course.instructor.get_full_name.0|upper }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <div class="fw-bold">{{ course.instructor.get_full_name|default:course.instructor.username }}</div>
+                                    {% if course.instructor.bio %}
+                                    <small class="text-muted">{{ course.instructor.bio|truncatewords:15 }}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Contenu du cours -->
+                        <h6 class="mb-3">
+                            <i class="bi bi-journal-text me-2"></i>
+                            Contenu du cours
+                        </h6>
+                        
+                        <div class="row mb-3">
+                            <div class="col-6 col-md-3 text-center">
+                                <div class="h5 text-primary mb-1">{{ course.modules.count }}</div>
+                                <small class="text-muted">Modules</small>
+                            </div>
+                            <div class="col-6 col-md-3 text-center">
+                                <div class="h5 text-primary mb-1">{{ course.total_lessons }}</div>
+                                <small class="text-muted">Leçons</small>
+                            </div>
+                            <div class="col-6 col-md-3 text-center">
+                                <div class="h5 text-primary mb-1">{{ course.estimated_duration }}h</div>
+                                <small class="text-muted">Durée</small>
+                            </div>
+                            <div class="col-6 col-md-3 text-center">
+                                <div class="h5 text-primary mb-1">{{ course.enrollment_count }}</div>
+                                <small class="text-muted">Étudiants</small>
+                            </div>
+                        </div>
+
+                        <!-- Ce que vous obtiendrez -->
+                        <div class="course-benefits">
+                            <h6 class="mb-3">
+                                <i class="bi bi-check-circle-fill me-2"></i>
+                                Ce que vous obtiendrez
+                            </h6>
+                            
+                            <div class="benefit-item">
+                                <i class="bi bi-infinity benefit-icon"></i>
+                                <span>Accès à vie au cours</span>
+                            </div>
+                            <div class="benefit-item">
+                                <i class="bi bi-phone benefit-icon"></i>
+                                <span>Accès sur mobile et tablette</span>
+                            </div>
+                            <div class="benefit-item">
+                                <i class="bi bi-award benefit-icon"></i>
+                                <span>Certificat de fin de formation</span>
+                            </div>
+                            <div class="benefit-item">
+                                <i class="bi bi-chat-dots benefit-icon"></i>
+                                <span>Support communautaire</span>
+                            </div>
+                            {% if course.has_downloadable_resources %}
+                            <div class="benefit-item">
+                                <i class="bi bi-download benefit-icon"></i>
+                                <span>Ressources téléchargeables</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Détails financiers -->
+            <div class="col-lg-4">
+                <div class="order-summary-card">
+                    <div class="order-details">
+                        <div class="security-badge">
+                            <i class="bi bi-shield-check me-2"></i>
+                            Paiement sécurisé
+                        </div>
+
+                        <h5 class="mb-3">Détails de commande</h5>
+
+                        <div class="price-breakdown">
+                            <div class="price-row">
+                                <span>Prix du cours:</span>
+                                <span>{{ course.price|floatformat:0 }} XAF</span>
+                            </div>
+                            <div class="price-row">
+                                <span>Frais de service:</span>
+                                <span class="text-success">Inclus</span>
+                            </div>
+                            <div class="price-row">
+                                <span>Taxes:</span>
+                                <span class="text-success">Incluses</span>
+                            </div>
+                            {% comment %}
+                            <div class="price-row">
+                                <span class="text-success">Réduction (-10%):</span>
+                                <span class="text-success">-{{ course.price|floatformat:0|mul:0.1 }} XAF</span>
+                            </div>
+                            {% endcomment %}
+                            <div class="price-row">
+                                <span><strong>Total à payer:</strong></span>
+                                <span class="text-success"><strong>{{ course.price|floatformat:0 }} XAF</strong></span>
+                            </div>
+                        </div>
+
+                        <!-- Informations client -->
+                        <div class="mb-3">
+                            <h6 class="mb-2">Informations de facturation</h6>
+                            <div class="small text-muted">
+                                <div><strong>Nom:</strong> {{ user.get_full_name|default:user.username }}</div>
+                                <div><strong>Email:</strong> {{ user.email }}</div>
+                                {% if user.phone %}
+                                <div><strong>Téléphone:</strong> {{ user.phone }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Politique d'annulation -->
+                        <div class="alert alert-info">
+                            <small>
+                                <i class="bi bi-info-circle me-2"></i>
+                                <strong>Politique d'annulation:</strong> Garantie satisfait ou remboursé sous 30 jours.
+                            </small>
+                        </div>
+
+                        <!-- Boutons d'action -->
+                        <div class="action-buttons">
+                            <a href="{% url 'courses:course_detail' course.id %}" 
+                               class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left me-2"></i>
+                                Retour
+                            </a>
+                            <a href="{% url 'payments:course_payment' course.id %}" 
+                               class="btn btn-primary">
+                                <i class="bi bi-credit-card me-2"></i>
+                                Procéder au paiement
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Garanties et sécurité -->
+                <div class="mt-3">
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <i class="bi bi-shield-check text-success" style="font-size: 2rem;"></i>
+                            <div class="small mt-1">Paiement sécurisé SSL</div>
+                        </div>
+                        <div class="col-4">
+                            <i class="bi bi-arrow-clockwise text-info" style="font-size: 2rem;"></i>
+                            <div class="small mt-1">Garantie 30 jours</div>
+                        </div>
+                        <div class="col-4">
+                            <i class="bi bi-headset text-warning" style="font-size: 2rem;"></i>
+                            <div class="small mt-1">Support 24/7</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Animation d'entrée pour les cartes
+    const cards = document.querySelectorAll('.order-summary-card');
+    cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+            card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 200);
+    });
+
+    // Validation avant de procéder au paiement
+    document.querySelector('.btn-primary').addEventListener('click', function(e) {
+        // Ici on pourrait ajouter des validations supplémentaires
+        // Par exemple, vérifier que l'utilisateur accepte les conditions
+        
+        // Animation de chargement
+        const btn = e.target;
+        const originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Préparation...';
+        
+        // Laisser la redirection se faire après un petit délai
+        setTimeout(() => {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        }, 3000);
+    });
+});
+
+// Fonction pour calculer une réduction dynamique (optionnel)
+function applyDiscount(percentage) {
+    // Cette fonction pourrait être utilisée pour des promotions dynamiques
+    const priceElement = document.querySelector('.price-breakdown .price-row:last-child span:last-child strong');
+    if (priceElement) {
+        const currentPrice = parseFloat('{{ course.price }}');
+        const discountedPrice = currentPrice * (1 - percentage / 100);
+        priceElement.textContent = Math.round(discountedPrice) + ' XAF';
+    }
+}
+</script>
+{% endblock %}
