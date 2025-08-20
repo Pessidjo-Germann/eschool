@@ -88,33 +88,20 @@ def initiate_payment(request):
     return render(request, 'payments/initiate_payment.html')
 
 
-@login_required
-def course_order_summary(request, course_id):
-    """Vue pour afficher le résumé de commande avant paiement"""
-    course = get_object_or_404(Course, id=course_id)
-    
-    # Vérifier si l'utilisateur n'est pas déjà inscrit
-    if Enrollment.objects.filter(user=request.user, course=course).exists():
-        messages.info(request, "Vous êtes déjà inscrit à ce cours")
-        return redirect('courses:course_detail', slug=course.slug)
-    
-    # Vérifier si le cours est gratuit
-    if course.price == 0:
-        # Inscription directe pour les cours gratuits
-        course.enrollments.create(user=request.user)
-        messages.success(request, f"Vous êtes maintenant inscrit au cours {course.title}")
-        return redirect('courses:course_detail', slug=course.slug)
-    
-    context = {
-        'course': course,
-        'payment_config': PaymentConfiguration.get_active_config()
-    }
-    return render(request, 'payments/order_summary.html', context)
-
 
 @login_required
 def course_payment(request, course_id):
-    """Vue spécialisée pour le paiement d'un cours"""
+    """
+    Vue spécialisée pour le paiement d'un cours
+    
+    NUMÉROS DE TEST NOTCHPAY (Mode Sandbox):
+    - Paiement réussi: 670000000
+    - Fonds insuffisants: 670000001  
+    - Échec de paiement: 670000002
+    
+    Utilisez des numéros différents pour chaque test pour éviter 
+    la détection anti-fraude de Notchpay.
+    """
     course = get_object_or_404(Course, id=course_id)
     
     # Vérifier si l'utilisateur n'est pas déjà inscrit

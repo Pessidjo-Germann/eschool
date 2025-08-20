@@ -22,6 +22,9 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
     
+    {# Nouveau bloc pour styles supplémentaires des pages (ex: order_summary) #}
+    {% block extra_css %}{% endblock %}
+    
     <!-- Favicon -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
     
@@ -45,5 +48,7 @@
     <script src="{% static 'js/main.js' %}"></script>
     
     {% block extra_scripts %}{% endblock %}
+    {# Nouveau bloc pour scripts supplémentaires (ex: selectOperator) #}
+    {% block extra_js %}{% endblock %}
 </body>
 </html>

@@ -96,47 +96,73 @@
 }
 .payment-methods {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    gap: 1rem;
-    margin: 1.5rem 0;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem;
+    margin: 2rem 0;
 }
-.payment-method {
+.payment-button {
     background: white;
     border: 2px solid #e9ecef;
-    border-radius: 8px;
-    padding: 1rem;
+    border-radius: 12px;
+    padding: 1.5rem;
     text-align: center;
     transition: all 0.3s;
     cursor: pointer;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    display: block;
+    width: 100%;
+    user-select: none;
+    font-family: inherit;
+    font-size: inherit;
 }
-.payment-method:hover {
+.payment-button:hover {
     border-color: #007bff;
     transform: translateY(-2px);
+    background: #f8f9fa;
 }
-.payment-method.selected {
+.payment-button:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0,123,255,0.25);
+}
+.payment-button.selected {
     border-color: #007bff;
     background: #f0f8ff;
+    box-shadow: 0 4px 15px rgba(0,123,255,0.2);
+}
+.payment-button:active {
+    transform: translateY(0);
 }
 .payment-method-details {
     display: none;
-    margin-top: 1rem;
-    padding: 1rem;
+    margin-top: 2rem;
+    padding: 1.5rem;
     background: #f8f9fa;
-    border-radius: 8px;
+    border-radius: 12px;
     border: 1px solid #e9ecef;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
 }
 .payment-method-details.show {
     display: block;
-    animation: fadeIn 0.3s ease;
+    animation: slideInUp 0.4s ease;
 }
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
+.form-content {
+    transition: all 0.3s ease;
+}
+@keyframes slideInUp {
+    from { 
+        opacity: 0; 
+        transform: translateY(20px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
+    }
 }
 .phone-input {
     display: flex;
     align-items: center;
-    margin-bottom: 1rem;
+    margin: 1rem 0;
 }
 .country-code {
     background: #e9ecef;
@@ -159,6 +185,13 @@
 @media (max-width: 768px) {
     .checkout-steps {
         display: none;
+    }
+    .payment-methods {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    .payment-button {
+        padding: 1rem;
     }
 }
 </style>
@@ -193,9 +226,6 @@
                 </li>
                 <li class="breadcrumb-item">
                     <a href="{% url 'courses:course_detail' course.id %}">{{ course.title }}</a>
-                </li>
-                <li class="breadcrumb-item">
-                    <a href="{% url 'payments:course_order_summary' course.id %}">Résumé</a>
                 </li>
                 <li class="breadcrumb-item active" aria-current="page">Paiement</li>
             </ol>
@@ -252,134 +282,87 @@
             </div>
 
             {% if payment_config %}
-            <div class="alert alert-info">
-                <i class="bi bi-info-circle me-2"></i>
-                <strong>Environnement:</strong> 
+            <div class="alert alert-warning">
+                <i class="bi bi-exclamation-triangle me-2"></i>
+                <strong>Mode Test :</strong> 
                 {% if payment_config.is_sandbox %}
-                    Mode Test (Sandbox)
+                    <span class="badge bg-warning text-dark">SANDBOX</span>
+                    <div class="mt-2">
+                        <strong>Numéros de test à utiliser :</strong>
+                        <ul class="mb-0 mt-1">
+                            <li><strong>Paiement réussi :</strong> <code>670000000</code></li>
+                            <li><strong>Fonds insuffisants :</strong> <code>670000001</code></li>
+                            <li><strong>Échec de paiement :</strong> <code>670000002</code></li>
+                        </ul>
+                        <small class="text-muted">⚠️ Utilisez différents numéros pour chaque test</small>
+                    </div>
                 {% else %}
-                    Mode Production
+                    <span class="badge bg-success">PRODUCTION</span>
                 {% endif %}
             </div>
             {% endif %}
 
             <!-- Méthodes de paiement disponibles -->
-            <h6 class="mb-3">Choisir une méthode de paiement</h6>
+            <h6 class="mb-3"> money</h6>
+            <div class="alert alert-light border border-primary mb-4">
+                <i class="bi bi-info-circle text-primary me-2"></i>
+                <strong>Étape 1 :</strong> Sélectionnez votre opérateur mobile pour continuer
+            </div>
             <div class="payment-methods">
-                <div class="payment-method" data-method="mtn_momo">
+                <button type="button" class="payment-button" data-method="mtn_momo">
                     <i class="bi bi-phone" style="font-size: 2rem; color: #FFD700;"></i>
-                    <div class="mt-2 fw-bold">MTN Money</div>
-                    <small class="text-muted">Mobile Money</small>
-                </div>
-                <div class="payment-method" data-method="orange_money">
+                    <div class="mt-2 fw-bold">MTN Mobile Money</div>
+                    <small class="text-muted">Paiement instantané</small>
+                </button>
+                <button type="button" class="payment-button" data-method="orange_money">
                     <i class="bi bi-phone" style="font-size: 2rem; color: #FF6600;"></i>
                     <div class="mt-2 fw-bold">Orange Money</div>
-                    <small class="text-muted">Mobile Money</small>
+                    <small class="text-muted">Paiement instantané</small>
+                </button>
+            </div>
+
+            <!-- Formulaire unifié qui s'affiche après sélection -->
+            <div id="mobile_money_form" class="payment-method-details">
+                <div class="alert alert-success border-0 mb-3">
+                    <i class="bi bi-check-circle me-2"></i>
+                    <strong>Étape 2 :</strong> Entrez votre numéro de téléphone mobile
                 </div>
-                <div class="payment-method" data-method="express_union">
-                    <i class="bi bi-bank" style="font-size: 2rem; color: #0066CC;"></i>
-                    <div class="mt-2 fw-bold">Express Union</div>
-                    <small class="text-muted">Virement</small>
+                
+                <div id="mtn_form_content" class="form-content" style="display: none;">
+                    <h6><i class="bi bi-phone-fill me-2 text-warning"></i>MTN Mobile Money</h6>
+                    <div class="security-info">
+                        <i class="bi bi-shield-check me-2"></i>
+                        <strong>Sécurisé:</strong> Vous recevrez un code de confirmation sur votre téléphone.
+                    </div>
+                    <div class="phone-input">
+                        <span class="country-code">+237</span>
+                        <input type="tel" class="form-control phone-number" placeholder="6XX XXX XXX" 
+                               pattern="6[5-9][0-9]{7}" maxlength="9" id="mtn-phone">
+                    </div>
+                    <small class="text-muted">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Assurez-vous que votre compte MTN Money dispose de fonds suffisants.
+                    </small>
                 </div>
-                <div class="payment-method" data-method="card">
-                    <i class="bi bi-credit-card" style="font-size: 2rem; color: #6c757d;"></i>
-                    <div class="mt-2 fw-bold">Carte bancaire</div>
-                    <small class="text-muted">Visa/Mastercard</small>
+
+                <div id="orange_form_content" class="form-content" style="display: none;">
+                    <h6><i class="bi bi-phone-fill me-2" style="color: #FF6600;"></i>Orange Money</h6>
+                    <div class="security-info">
+                        <i class="bi bi-shield-check me-2"></i>
+                        <strong>Sécurisé:</strong> Authentification par code PIN Orange Money.
+                    </div>
+                    <div class="phone-input">
+                        <span class="country-code">+237</span>
+                        <input type="tel" class="form-control phone-number" placeholder="6XX XXX XXX" 
+                               pattern="6[5-9][0-9]{7}" maxlength="9" id="orange-phone">
+                    </div>
+                    <small class="text-muted">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Votre compte Orange Money sera débité automatiquement.
+                    </small>
                 </div>
             </div>
 
-            <!-- Formulaires spécifiques pour chaque méthode -->
-            <div id="mtn_momo_details" class="payment-method-details">
-                <h6><i class="bi bi-phone-fill me-2 text-warning"></i>MTN Mobile Money</h6>
-                <div class="security-info">
-                    <i class="bi bi-shield-check me-2"></i>
-                    <strong>Sécurisé:</strong> Vous recevrez un code de confirmation sur votre téléphone.
-                </div>
-                <div class="phone-input">
-                    <span class="country-code">+237</span>
-                    <input type="tel" class="form-control phone-number" placeholder="6XX XXX XXX" 
-                           pattern="6[5-9][0-9]{7}" maxlength="9" id="mtn-phone">
-                </div>
-                <small class="text-muted">
-                    <i class="bi bi-info-circle me-1"></i>
-                    Assurez-vous que votre compte MTN Money dispose de fonds suffisants.
-                </small>
-            </div>
-
-            <div id="orange_money_details" class="payment-method-details">
-                <h6><i class="bi bi-phone-fill me-2 text-warning"></i>Orange Money</h6>
-                <div class="security-info">
-                    <i class="bi bi-shield-check me-2"></i>
-                    <strong>Sécurisé:</strong> Authentification par code PIN Orange Money.
-                </div>
-                <div class="phone-input">
-                    <span class="country-code">+237</span>
-                    <input type="tel" class="form-control phone-number" placeholder="6XX XXX XXX" 
-                           pattern="6[5-9][0-9]{7}" maxlength="9" id="orange-phone">
-                </div>
-                <small class="text-muted">
-                    <i class="bi bi-info-circle me-1"></i>
-                    Votre compte Orange Money sera débité automatiquement.
-                </small>
-            </div>
-
-            <div id="express_union_details" class="payment-method-details">
-                <h6><i class="bi bi-bank me-2 text-primary"></i>Express Union</h6>
-                <div class="security-info">
-                    <i class="bi bi-shield-check me-2"></i>
-                    <strong>Fiable:</strong> Transfert bancaire sécurisé via Express Union.
-                </div>
-                <div class="row">
-                    <div class="col-md-6">
-                        <label class="form-label">Nom complet</label>
-                        <input type="text" class="form-control" id="eu-name" 
-                               placeholder="Nom tel qu'il apparaît sur votre pièce d'identité">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Téléphone</label>
-                        <input type="tel" class="form-control" id="eu-phone" 
-                               placeholder="+237 6XX XXX XXX">
-                    </div>
-                </div>
-                <small class="text-muted">
-                    <i class="bi bi-info-circle me-1"></i>
-                    Un agent Express Union vous contactera pour finaliser le paiement.
-                </small>
-            </div>
-
-            <div id="card_details" class="payment-method-details">
-                <h6><i class="bi bi-credit-card me-2 text-success"></i>Carte bancaire</h6>
-                <div class="security-info">
-                    <i class="bi bi-shield-check me-2"></i>
-                    <strong>Sécurisé SSL:</strong> Vos informations sont protégées par un chiffrement 256-bit.
-                </div>
-                <div class="row">
-                    <div class="col-12">
-                        <label class="form-label">Numéro de carte</label>
-                        <input type="text" class="form-control" id="card-number" 
-                               placeholder="1234 5678 9012 3456" maxlength="19">
-                    </div>
-                    <div class="col-md-6 mt-2">
-                        <label class="form-label">Date d'expiration</label>
-                        <input type="text" class="form-control" id="card-expiry" 
-                               placeholder="MM/AA" maxlength="5">
-                    </div>
-                    <div class="col-md-6 mt-2">
-                        <label class="form-label">Code de sécurité (CVV)</label>
-                        <input type="text" class="form-control" id="card-cvv" 
-                               placeholder="123" maxlength="4">
-                    </div>
-                    <div class="col-12 mt-2">
-                        <label class="form-label">Nom sur la carte</label>
-                        <input type="text" class="form-control" id="card-name" 
-                               placeholder="Nom tel qu'il apparaît sur la carte">
-                    </div>
-                </div>
-                <small class="text-muted">
-                    <i class="bi bi-info-circle me-1"></i>
-                    Nous acceptons Visa, Mastercard et American Express.
-                </small>
-            </div>
 
             <!-- Résumé de la commande -->
             <div class="card mt-4">
@@ -446,35 +429,52 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const paymentMethods = document.querySelectorAll('.payment-method');
+    const paymentButtons = document.querySelectorAll('.payment-button');
     const selectedMethodInput = document.getElementById('selected-method');
     const payButton = document.getElementById('pay-button');
     const paymentForm = document.getElementById('payment-form');
     
-    // Gestion de la sélection des méthodes de paiement
-    paymentMethods.forEach(method => {
-        method.addEventListener('click', function() {
+    // Gestion de la sélection des méthodes de paiement via boutons
+    paymentButtons.forEach(button => {
+        button.addEventListener('click', function() {
             // Retirer la sélection précédente
-            paymentMethods.forEach(m => m.classList.remove('selected'));
-            document.querySelectorAll('.payment-method-details').forEach(detail => {
-                detail.classList.remove('show');
-            });
+            paymentButtons.forEach(btn => btn.classList.remove('selected'));
             
-            // Sélectionner la nouvelle méthode
+            // Sélectionner le bouton cliqué
             this.classList.add('selected');
             
-            // Afficher les détails de la méthode sélectionnée
+            // Masquer tous les formulaires
+            document.querySelectorAll('.form-content').forEach(content => {
+                content.style.display = 'none';
+            });
+            
+            // Afficher le formulaire correspondant
             const methodValue = this.dataset.method;
-            const detailsElement = document.getElementById(methodValue + '_details');
-            if (detailsElement) {
-                detailsElement.classList.add('show');
+            const mobileMoneyForm = document.getElementById('mobile_money_form');
+            
+            if (methodValue === 'mtn_momo') {
+                document.getElementById('mtn_form_content').style.display = 'block';
+                mobileMoneyForm.classList.add('show');
+            } else if (methodValue === 'orange_money') {
+                document.getElementById('orange_form_content').style.display = 'block';
+                mobileMoneyForm.classList.add('show');
             }
             
             // Mettre à jour le champ caché
             selectedMethodInput.value = methodValue;
             
-            // Valider et activer le bouton de paiement
-            validatePaymentForm();
+            // Réinitialiser la validation
+            payButton.disabled = true;
+            
+            // Focus sur le champ de numéro de téléphone
+            setTimeout(() => {
+                const phoneInput = methodValue === 'mtn_momo' ? 
+                    document.getElementById('mtn-phone') : 
+                    document.getElementById('orange-phone');
+                if (phoneInput) {
+                    phoneInput.focus();
+                }
+            }, 300);
         });
     });
     
@@ -492,52 +492,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 const orangePhone = document.getElementById('orange-phone');
                 isValid = orangePhone && orangePhone.value.match(/^6[5-9][0-9]{7}$/);
                 break;
-            case 'express_union':
-                const euName = document.getElementById('eu-name');
-                const euPhone = document.getElementById('eu-phone');
-                isValid = euName && euName.value.trim().length > 2 && 
-                         euPhone && euPhone.value.trim().length > 8;
-                break;
-            case 'card':
-                const cardNumber = document.getElementById('card-number');
-                const cardExpiry = document.getElementById('card-expiry');
-                const cardCvv = document.getElementById('card-cvv');
-                const cardName = document.getElementById('card-name');
-                
-                isValid = cardNumber && cardNumber.value.replace(/\s/g, '').length >= 13 &&
-                         cardExpiry && cardExpiry.value.match(/^(0[1-9]|1[0-2])\/[0-9]{2}$/) &&
-                         cardCvv && cardCvv.value.length >= 3 &&
-                         cardName && cardName.value.trim().length > 2;
-                break;
         }
         
         payButton.disabled = !isValid;
         return isValid;
     }
     
-    // Formatage automatique des numéros de carte
-    const cardNumberInput = document.getElementById('card-number');
-    if (cardNumberInput) {
-        cardNumberInput.addEventListener('input', function() {
-            let value = this.value.replace(/\D/g, '');
-            value = value.replace(/(\d{4})(?=\d)/g, '$1 ');
-            this.value = value;
-            validatePaymentForm();
-        });
-    }
-    
-    // Formatage de la date d'expiration
-    const cardExpiryInput = document.getElementById('card-expiry');
-    if (cardExpiryInput) {
-        cardExpiryInput.addEventListener('input', function() {
-            let value = this.value.replace(/\D/g, '');
-            if (value.length >= 2) {
-                value = value.substring(0, 2) + '/' + value.substring(2, 4);
-            }
-            this.value = value;
-            validatePaymentForm();
-        });
-    }
     
     // Validation des numéros de téléphone
     document.querySelectorAll('input[type="tel"]').forEach(input => {
@@ -569,9 +529,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const selectedMethod = selectedMethodInput.value;
         const methodLabels = {
             'mtn_momo': 'MTN Mobile Money',
-            'orange_money': 'Orange Money', 
-            'express_union': 'Express Union',
-            'card': 'Carte bancaire'
+            'orange_money': 'Orange Money'
         };
         
         const modal = document.createElement('div');
