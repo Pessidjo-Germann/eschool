@@ -286,15 +286,18 @@
                 <i class="bi bi-exclamation-triangle me-2"></i>
                 <strong>Mode Test :</strong> 
                 {% if payment_config.is_sandbox %}
-                    <span class="badge bg-warning text-dark">SANDBOX</span>
+                    <span class="badge bg-warning text-dark">MODE SIMULATION</span>
                     <div class="mt-2">
-                        <strong>Numéros de test à utiliser :</strong>
+                        <strong>Numéros de simulation :</strong>
                         <ul class="mb-0 mt-1">
                             <li><strong>Paiement réussi :</strong> <code>670000000</code></li>
                             <li><strong>Fonds insuffisants :</strong> <code>670000001</code></li>
                             <li><strong>Échec de paiement :</strong> <code>670000002</code></li>
                         </ul>
-                        <small class="text-muted">⚠️ Utilisez différents numéros pour chaque test</small>
+                        <small class="text-muted">
+                            🔧 <strong>Mode développement :</strong> Aucun argent réel ne sera débité. 
+                            Pour les vrais paiements, configurez de vraies clés API Notchpay.
+                        </small>
                     </div>
                 {% else %}
                     <span class="badge bg-success">PRODUCTION</span>
@@ -390,6 +393,7 @@
             <form method="post" id="payment-form" class="mt-4">
                 {% csrf_token %}
                 <input type="hidden" name="payment_method" id="selected-method" value="">
+                <input type="hidden" name="phone" id="selected-phone" value="">
                 
                 <div class="d-grid gap-2">
                     <button type="submit" class="btn btn-primary btn-lg" id="pay-button" disabled>
@@ -481,18 +485,25 @@ document.addEventListener('DOMContentLoaded', function() {
     // Validation en temps réel des champs
     function validatePaymentForm() {
         const selectedMethod = selectedMethodInput.value;
+        const selectedPhoneInput = document.getElementById('selected-phone');
         let isValid = false;
+        let phoneValue = '';
         
         switch(selectedMethod) {
             case 'mtn_momo':
                 const mtnPhone = document.getElementById('mtn-phone');
                 isValid = mtnPhone && mtnPhone.value.match(/^6[5-9][0-9]{7}$/);
+                phoneValue = mtnPhone ? mtnPhone.value : '';
                 break;
             case 'orange_money':
                 const orangePhone = document.getElementById('orange-phone');
                 isValid = orangePhone && orangePhone.value.match(/^6[5-9][0-9]{7}$/);
+                phoneValue = orangePhone ? orangePhone.value : '';
                 break;
         }
+        
+        // Mettre à jour le champ caché avec le numéro
+        selectedPhoneInput.value = phoneValue;
         
         payButton.disabled = !isValid;
         return isValid;

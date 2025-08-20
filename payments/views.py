@@ -128,34 +128,73 @@ def course_payment(request, course_id):
                 customer_email=request.user.email,
                 customer_phone=getattr(request.user, 'phone', ''),
                 content_type=ContentType.objects.get_for_model(Course),
-                object_id=str(course.id),
-                return_url=request.build_absolute_uri(
-                    reverse('payments:payment_success', args=['{transaction_id}'])
-                ).replace('{transaction_id}', '{transaction_id}'),
-                cancel_url=request.build_absolute_uri(
-                    reverse('payments:payment_cancelled', args=['{transaction_id}'])
-                ).replace('{transaction_id}', '{transaction_id}')
+                object_id=str(course.id)
             )
             
-            # Remplacer les placeholders avec l'ID réel de la transaction
-            transaction.return_url = transaction.return_url.replace('{transaction_id}', str(transaction.id))
-            transaction.cancel_url = transaction.cancel_url.replace('{transaction_id}', str(transaction.id))
+            # Construire les URLs de retour avec l'ID réel de la transaction
+            transaction.return_url = request.build_absolute_uri(
+                reverse('payments:payment_success', args=[str(transaction.id)])
+            )
+            transaction.cancel_url = request.build_absolute_uri(
+                reverse('payments:payment_cancelled', args=[str(transaction.id)])
+            )
             transaction.save()
             
-            # Initialiser le paiement
-            notchpay_service = get_notchpay_service()
-            success, response_data = notchpay_service.initialize_payment(transaction)
+            # Mode simulation pour les tests (sans vraies clés Notchpay)
+            config = PaymentConfiguration.get_active_config()
             
-            if success:
-                authorization_url = response_data.get('authorization_url')
-                if authorization_url:
-                    return redirect(authorization_url)
-                else:
-                    messages.error(request, "URL d'autorisation non reçue")
+            # Si les clés contiennent "000000", c'est une simulation
+            if config and '000000' in config.public_key:
+                # Simulation des différents scénarios selon le numéro de téléphone
+                phone = request.POST.get('phone', '')
+                
+                if phone.endswith('000000000'):  # Succès
+                    transaction.status = 'completed'
+                    transaction.notchpay_transaction_id = f'sim_{transaction.id}'
+                    transaction.paid_at = timezone.now()
+                    transaction.save()
+                    
+                    # Créer l'inscription
+                    enrollment, created = course.enrollments.get_or_create(user=request.user)
+                    if created:
+                        messages.success(request, f"Paiement simulé réussi ! Inscription au cours: {course.title}")
+                    
+                    return redirect('payments:payment_success', transaction_id=transaction.id)
+                    
+                elif phone.endswith('000000001'):  # Fonds insuffisants
+                    transaction.status = 'failed'
+                    transaction.error_message = 'Fonds insuffisants'
+                    transaction.save()
+                    messages.error(request, "Simulation: Fonds insuffisants")
                     return redirect('payments:payment_failure', transaction_id=transaction.id)
-            else:
-                error_message = response_data.get('message', 'Erreur lors de l\'initialisation du paiement')
-                messages.error(request, error_message)
+                    
+                else:  # Échec général
+                    transaction.status = 'failed'
+                    transaction.error_message = 'Échec de paiement simulé'
+                    transaction.save()
+                    messages.error(request, "Simulation: Échec de paiement")
+                    return redirect('payments:payment_failure', transaction_id=transaction.id)
+            
+            # Code normal avec vraies clés Notchpay
+            try:
+                notchpay_service = get_notchpay_service()
+                success, response_data = notchpay_service.initialize_payment(transaction)
+                
+                if success:
+                    authorization_url = response_data.get('authorization_url')
+                    if authorization_url:
+                        return redirect(authorization_url)
+                    else:
+                        messages.error(request, "URL d'autorisation non reçue")
+                        return redirect('payments:payment_failure', transaction_id=transaction.id)
+                else:
+                    error_message = response_data.get('message', 'Erreur lors de l\'initialisation du paiement')
+                    messages.error(request, error_message)
+                    return redirect('payments:payment_failure', transaction_id=transaction.id)
+                    
+            except Exception as e:
+                logger.error(f"Erreur service Notchpay: {e}")
+                messages.error(request, "Service de paiement temporairement indisponible")
                 return redirect('payments:payment_failure', transaction_id=transaction.id)
                 
         except Exception as e:
