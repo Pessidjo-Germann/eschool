@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'quiz.apps.QuizConfig',
     'analytics.apps.AnalyticsConfig',
     'chatbot.apps.ChatbotConfig',
+    'assistant.apps.AssistantConfig',
 ]
 
 MIDDLEWARE = [
