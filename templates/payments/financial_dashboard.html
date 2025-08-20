@@ -1,0 +1,530 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Tableau de bord financier - eSchool{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stats-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: transform 0.2s;
+    }
+    
+    .stats-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .stats-value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #2c3e50;
+        margin-bottom: 5px;
+    }
+    
+    .stats-label {
+        color: #7f8c8d;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .change-indicator {
+        font-size: 0.8rem;
+        margin-top: 5px;
+    }
+    
+    .change-positive {
+        color: #27ae60;
+    }
+    
+    .change-negative {
+        color: #e74c3c;
+    }
+    
+    .chart-container {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    
+    .filter-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    
+    .recent-transactions {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    
+    .transaction-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 0;
+        border-bottom: 1px solid #ecf0f1;
+    }
+    
+    .transaction-item:last-child {
+        border-bottom: none;
+    }
+    
+    .overdue-invoice {
+        background-color: #fff5f5;
+        border-left: 4px solid #e53e3e;
+        padding: 10px 15px;
+        margin-bottom: 8px;
+        border-radius: 0 4px 4px 0;
+    }
+    
+    .export-buttons {
+        margin-top: 20px;
+    }
+    
+    .btn-export {
+        margin-right: 10px;
+        margin-bottom: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">📊 Tableau de bord financier</h1>
+        <div class="text-muted">
+            <i class="fas fa-calendar"></i> 
+            {{ start_date|date:"d/m/Y" }} - {{ end_date|date:"d/m/Y" }}
+        </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="filter-card">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label for="start_date" class="form-label">Date de début</label>
+                <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date|date:'Y-m-d' }}">
+            </div>
+            <div class="col-md-3">
+                <label for="end_date" class="form-label">Date de fin</label>
+                <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date|date:'Y-m-d' }}">
+            </div>
+            <div class="col-md-3">
+                <label for="period" class="form-label">Période de groupement</label>
+                <select class="form-select" id="period" name="period">
+                    <option value="day" {% if period == 'day' %}selected{% endif %}>Jour</option>
+                    <option value="week" {% if period == 'week' %}selected{% endif %}>Semaine</option>
+                    <option value="month" {% if period == 'month' %}selected{% endif %}>Mois</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary me-2">
+                    <i class="fas fa-filter"></i> Filtrer
+                </button>
+                <button type="button" class="btn btn-outline-secondary" onclick="exportData()">
+                    <i class="fas fa-download"></i> Exporter
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Statistiques principales -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="stats-card">
+                <div class="stats-value text-success">{{ stats.total_revenue|floatformat:0 }} FCFA</div>
+                <div class="stats-label">Revenus totaux</div>
+                <div class="change-indicator {% if stats.revenue_change >= 0 %}change-positive{% else %}change-negative{% endif %}">
+                    {% if stats.revenue_change >= 0 %}↗{% else %}↘{% endif %}
+                    {{ stats.revenue_change|floatformat:1 }}% par rapport à la période précédente
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="stats-card">
+                <div class="stats-value text-info">{{ stats.total_transactions }}</div>
+                <div class="stats-label">Total transactions</div>
+                <div class="change-indicator">
+                    <span class="text-success">{{ stats.successful_transactions }} réussies</span> • 
+                    <span class="text-danger">{{ stats.failed_transactions }} échouées</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="stats-card">
+                <div class="stats-value text-primary">{{ stats.success_rate|floatformat:1 }}%</div>
+                <div class="stats-label">Taux de succès</div>
+                <div class="change-indicator text-muted">
+                    Moyenne: {{ stats.average_transaction|floatformat:0 }} FCFA
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-3">
+            <div class="stats-card">
+                <div class="stats-value text-warning">{{ stats.pending_amount|floatformat:0 }} FCFA</div>
+                <div class="stats-label">Montants en attente</div>
+                <div class="change-indicator text-muted">
+                    Transactions en cours de traitement
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Graphique des revenus -->
+        <div class="col-md-8 mb-4">
+            <div class="chart-container">
+                <h5 class="mb-3">📈 Évolution des revenus</h5>
+                <canvas id="revenueChart" height="100"></canvas>
+            </div>
+        </div>
+        
+        <!-- Répartition par méthode de paiement -->
+        <div class="col-md-4 mb-4">
+            <div class="chart-container">
+                <h5 class="mb-3">💳 Méthodes de paiement</h5>
+                <canvas id="methodChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Graphique des transactions par statut -->
+        <div class="col-md-6 mb-4">
+            <div class="chart-container">
+                <h5 class="mb-3">📊 Transactions par statut</h5>
+                <canvas id="statusChart" height="150"></canvas>
+            </div>
+        </div>
+        
+        <!-- Transactions récentes -->
+        <div class="col-md-6 mb-4">
+            <div class="chart-container">
+                <h5 class="mb-3">🕐 Transactions récentes</h5>
+                <div class="recent-transactions">
+                    {% for transaction in recent_transactions %}
+                    <div class="transaction-item">
+                        <div>
+                            <strong>{{ transaction.reference }}</strong><br>
+                            <small class="text-muted">
+                                {% if transaction.user %}
+                                    {{ transaction.user.get_full_name|default:transaction.user.username }}
+                                {% else %}
+                                    {{ transaction.customer_name }}
+                                {% endif %}
+                                • {{ transaction.created_at|date:"d/m/Y H:i" }}
+                            </small>
+                        </div>
+                        <div class="text-end">
+                            <strong class="text-success">{{ transaction.amount|floatformat:0 }} {{ transaction.currency }}</strong><br>
+                            <small class="badge bg-success">{{ transaction.get_status_display }}</small>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted text-center py-3">Aucune transaction récente</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Factures en retard -->
+    {% if overdue_invoices %}
+    <div class="row">
+        <div class="col-12">
+            <div class="chart-container">
+                <h5 class="mb-3 text-danger">⚠️ Factures en retard</h5>
+                {% for invoice in overdue_invoices %}
+                <div class="overdue-invoice">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>{{ invoice.invoice_number }}</strong> - {{ invoice.billing_name }}<br>
+                            <small class="text-muted">
+                                Échue le {{ invoice.due_date|date:"d/m/Y" }} 
+                                ({{ invoice.days_until_due|abs }} jours de retard)
+                            </small>
+                        </div>
+                        <div class="text-end">
+                            <strong class="text-danger">{{ invoice.total_amount|floatformat:0 }} {{ invoice.currency }}</strong><br>
+                            <a href="#" class="btn btn-sm btn-outline-primary" onclick="sendInvoiceReminder({{ invoice.id }})">
+                                Relancer
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Boutons d'export -->
+    <div class="export-buttons">
+        <h5>📥 Exports</h5>
+        <div class="d-flex flex-wrap">
+            <a href="{% url 'payments:export_transactions_csv' %}?{{ request.GET.urlencode }}" 
+               class="btn btn-outline-success btn-export">
+                <i class="fas fa-file-csv"></i> Export CSV
+            </a>
+            <a href="{% url 'payments:export_accounting_data' %}?{{ request.GET.urlencode }}" 
+               class="btn btn-outline-info btn-export">
+                <i class="fas fa-file-alt"></i> Export Comptable (FEC)
+            </a>
+            <button type="button" class="btn btn-outline-warning btn-export" onclick="generateFinancialReport()">
+                <i class="fas fa-chart-pie"></i> Rapport Financier
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Configuration générale des graphiques
+    Chart.defaults.font.family = 'Inter, system-ui, sans-serif';
+    Chart.defaults.color = '#6c757d';
+    
+    // Données des graphiques (injectées depuis Django)
+    const revenueData = {{ revenue_data|safe }};
+    const transactionData = {{ transaction_data|safe }};
+    const methodData = {{ method_data|safe }};
+
+    // Graphique des revenus
+    const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+    new Chart(revenueCtx, {
+        type: 'line',
+        data: {
+            labels: revenueData.labels,
+            datasets: [{
+                label: 'Revenus (FCFA)',
+                data: revenueData.revenues,
+                borderColor: '#3498db',
+                backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4
+            }, {
+                label: 'Nombre de transactions',
+                data: revenueData.counts,
+                borderColor: '#2ecc71',
+                backgroundColor: 'rgba(46, 204, 113, 0.1)',
+                borderWidth: 2,
+                yAxisID: 'y1'
+            }]
+        },
+        options: {
+            responsive: true,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            scales: {
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: 'Revenus (FCFA)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return value.toLocaleString('fr-FR') + ' FCFA';
+                        }
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: 'Transactions'
+                    },
+                    grid: {
+                        drawOnChartArea: false,
+                    },
+                }
+            },
+            plugins: {
+                title: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            if (context.datasetIndex === 0) {
+                                return 'Revenus: ' + context.parsed.y.toLocaleString('fr-FR') + ' FCFA';
+                            } else {
+                                return 'Transactions: ' + context.parsed.y;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Graphique des méthodes de paiement
+    const methodCtx = document.getElementById('methodChart').getContext('2d');
+    new Chart(methodCtx, {
+        type: 'doughnut',
+        data: {
+            labels: methodData.labels,
+            datasets: [{
+                data: methodData.amounts,
+                backgroundColor: [
+                    '#3498db',
+                    '#e74c3c',
+                    '#f39c12',
+                    '#27ae60',
+                    '#9b59b6',
+                    '#1abc9c'
+                ],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const total = context.dataset.data.reduce((sum, value) => sum + value, 0);
+                            const percentage = ((context.raw / total) * 100).toFixed(1);
+                            return context.label + ': ' + context.raw.toLocaleString('fr-FR') + ' FCFA (' + percentage + '%)';
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Graphique des statuts de transactions
+    const statusCtx = document.getElementById('statusChart').getContext('2d');
+    new Chart(statusCtx, {
+        type: 'bar',
+        data: {
+            labels: transactionData.labels,
+            datasets: [{
+                label: 'Nombre',
+                data: transactionData.counts,
+                backgroundColor: [
+                    '#28a745',
+                    '#ffc107',
+                    '#dc3545',
+                    '#6c757d'
+                ],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+
+    // Fonctions utilitaires
+    function exportData() {
+        const exportModal = new bootstrap.Modal(document.getElementById('exportModal') || createExportModal());
+        exportModal.show();
+    }
+
+    function createExportModal() {
+        // Créer dynamiquement le modal d'export si nécessaire
+        const modalHtml = `
+            <div class="modal fade" id="exportModal" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Exporter les données</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p>Choisissez le format d'export :</p>
+                            <div class="d-grid gap-2">
+                                <a href="{% url 'payments:export_transactions_csv' %}?{{ request.GET.urlencode }}" 
+                                   class="btn btn-outline-success">
+                                    <i class="fas fa-file-csv"></i> Format CSV
+                                </a>
+                                <a href="{% url 'payments:export_accounting_data' %}?{{ request.GET.urlencode }}" 
+                                   class="btn btn-outline-info">
+                                    <i class="fas fa-file-alt"></i> Format FEC (Comptabilité)
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+        return document.getElementById('exportModal');
+    }
+
+    function sendInvoiceReminder(invoiceId) {
+        if (confirm('Envoyer un rappel par email pour cette facture ?')) {
+            fetch(`/payments/invoices/${invoiceId}/send-email/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Rappel envoyé avec succès !');
+                } else {
+                    alert('Erreur lors de l\'envoi du rappel: ' + data.error);
+                }
+            })
+            .catch(error => {
+                alert('Erreur réseau: ' + error);
+            });
+        }
+    }
+
+    function generateFinancialReport() {
+        window.print();
+    }
+
+    // Auto-refresh des données toutes les 5 minutes
+    setInterval(() => {
+        if (!document.hidden) {
+            location.reload();
+        }
+    }, 300000);
+</script>
+{% endblock %}

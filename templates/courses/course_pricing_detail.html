@@ -1,0 +1,393 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Tarification - {{ course.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .pricing-card {
+        border: 2px solid #e9ecef;
+        border-radius: 12px;
+        padding: 2rem;
+        margin-bottom: 1.5rem;
+        transition: all 0.3s ease;
+    }
+    
+    .pricing-card:hover {
+        border-color: #007bff;
+        box-shadow: 0 4px 12px rgba(0,123,255,0.15);
+    }
+    
+    .pricing-card.featured {
+        border-color: #28a745;
+        background: linear-gradient(135deg, #f8fff9 0%, #e8f5e8 100%);
+    }
+    
+    .price-amount {
+        font-size: 2.5rem;
+        font-weight: bold;
+        color: #28a745;
+    }
+    
+    .price-original {
+        text-decoration: line-through;
+        color: #6c757d;
+        font-size: 1.2rem;
+    }
+    
+    .discount-badge {
+        background: #dc3545;
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 50px;
+        font-size: 0.875rem;
+        font-weight: bold;
+    }
+    
+    .trial-progress {
+        background: #fff3cd;
+        border-left: 4px solid #ffc107;
+        padding: 1rem;
+        margin: 1rem 0;
+    }
+    
+    .module-card {
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        transition: transform 0.2s;
+    }
+    
+    .module-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+    
+    .installment-option {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        padding: 1rem;
+        margin-bottom: 0.5rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .installment-option:hover {
+        background: #e9ecef;
+        border-color: #007bff;
+    }
+    
+    .installment-option.selected {
+        background: #cce7ff;
+        border-color: #007bff;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- En-tête du cours -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'courses:list' %}">Cours</a></li>
+                    <li class="breadcrumb-item"><a href="{{ course.get_absolute_url }}">{{ course.title }}</a></li>
+                    <li class="breadcrumb-item active">Tarification</li>
+                </ol>
+            </nav>
+            <h1>{{ course.title }}</h1>
+            <p class="text-muted">{{ course.short_description }}</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <img src="{{ course.thumbnail.url }}" alt="{{ course.title }}" class="img-fluid rounded" style="max-height: 200px;">
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Options de tarification -->
+        <div class="col-lg-8">
+            <!-- Prix principal -->
+            <div class="pricing-card {% if not pricing_info.discount_amount %}featured{% endif %}">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <h3>🎓 Accès complet au cours</h3>
+                        <p class="text-muted">Accès à vie à tout le contenu, certificat inclus</p>
+                    </div>
+                    {% if pricing_info.discount_amount %}
+                        <span class="discount-badge">
+                            -{{ pricing_info.discount_amount|floatformat:0 }} {{ pricing_info.currency }}
+                        </span>
+                    {% endif %}
+                </div>
+                
+                <div class="price-display mb-3">
+                    {% if pricing_info.discount_amount %}
+                        <span class="price-original">{{ pricing_info.original_price|floatformat:0 }} {{ pricing_info.currency }}</span>
+                    {% endif %}
+                    <div class="price-amount">{{ pricing_info.discounted_price|floatformat:0 }} {{ pricing_info.currency }}</div>
+                    {% if pricing_info.promotion_applied %}
+                        <small class="text-success">✅ Code promo "{{ pricing_info.promotion_applied }}" appliqué</small>
+                    {% endif %}
+                </div>
+                
+                <div class="course-benefits mb-3">
+                    <ul class="list-unstyled">
+                        <li>✅ {{ course.total_modules }} modules de cours</li>
+                        <li>✅ {{ course.total_lessons }} leçons détaillées</li>
+                        <li>✅ Accès à vie au contenu</li>
+                        <li>✅ Certificat de completion</li>
+                        <li>✅ Support communautaire</li>
+                        <li>✅ Mises à jour gratuites</li>
+                    </ul>
+                </div>
+                
+                <div class="d-grid">
+                    <a href="{% url 'payments:course_payment' course.id %}" class="btn btn-success btn-lg">
+                        💳 Acheter maintenant
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Période d'essai gratuite -->
+            {% if pricing_info.has_free_trial %}
+                <div class="pricing-card">
+                    <div class="d-flex align-items-center mb-3">
+                        <h4 class="mb-0">🆓 Essai gratuit</h4>
+                        {% if not trial_status %}
+                            <span class="badge bg-primary ms-2">Disponible</span>
+                        {% endif %}
+                    </div>
+                    
+                    {% if trial_status %}
+                        <div class="trial-progress">
+                            <h6>Essai en cours</h6>
+                            <div class="progress mb-2">
+                                <div class="progress-bar" role="progressbar" 
+                                     style="width: {{ trial_status.progress_percentage }}%">
+                                </div>
+                            </div>
+                            <small>
+                                {{ trial_status.days_remaining }} jours restants 
+                                (expire le {{ trial_status.expires_at|date:"d/m/Y à H:i" }})
+                            </small>
+                        </div>
+                        <a href="{{ course.get_absolute_url }}" class="btn btn-primary">
+                            Continuer l'essai
+                        </a>
+                    {% else %}
+                        <p>{{ pricing_info.trial_info.access_type }} pendant {{ pricing_info.trial_info.duration_days }} jours</p>
+                        <div class="d-grid">
+                            <form method="post" action="{% url 'courses:start_free_trial' course.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-outline-primary btn-lg">
+                                    🎯 Commencer l'essai gratuit
+                                </button>
+                            </form>
+                        </div>
+                    {% endif %}
+                </div>
+            {% endif %}
+            
+            <!-- Paiement échelonné -->
+            {% if installment_options %}
+                <div class="pricing-card">
+                    <h4 class="mb-3">📅 Paiement échelonné</h4>
+                    <p class="text-muted">Payez en plusieurs fois sans frais supplémentaires</p>
+                    
+                    {% for option in installment_options %}
+                        <div class="installment-option" data-installments="{{ option.num_installments }}">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>{{ option.num_installments }} paiements</strong>
+                                    <small class="d-block text-muted">
+                                        Premier paiement: {{ option.first_payment|floatformat:0 }} {{ pricing_info.currency }}
+                                    </small>
+                                </div>
+                                <div class="text-end">
+                                    <div class="fw-bold">{{ option.first_payment|floatformat:0 }} {{ pricing_info.currency }}</div>
+                                    <small class="text-muted">puis {{ option.num_installments|add:"-1" }} × {{ option.installments.1|floatformat:0 }} {{ pricing_info.currency }}</small>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                    
+                    <div class="d-grid mt-3">
+                        <button class="btn btn-warning btn-lg" id="selectInstallmentBtn" disabled>
+                            Sélectionnez un plan ci-dessus
+                        </button>
+                    </div>
+                </div>
+            {% endif %}
+            
+            <!-- Modules individuels -->
+            {% if individual_modules %}
+                <div class="pricing-card">
+                    <h4 class="mb-3">📚 Achats par module</h4>
+                    <p class="text-muted">Achetez seulement les modules qui vous intéressent</p>
+                    
+                    {% for module_info in individual_modules %}
+                        <div class="module-card">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <h6>{{ module_info.module.title }}</h6>
+                                    <p class="text-muted small mb-2">{{ module_info.lessons_count }} leçons</p>
+                                    {% if module_info.module.description %}
+                                        <p class="small">{{ module_info.module.description|truncatewords:15 }}</p>
+                                    {% endif %}
+                                </div>
+                                <div class="text-end">
+                                    <div class="fw-bold text-success">{{ module_info.price|floatformat:0 }} {{ user_currency }}</div>
+                                    <button class="btn btn-sm btn-outline-primary mt-1">
+                                        Acheter ce module
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                    
+                    <div class="alert alert-info">
+                        <small>
+                            💡 <strong>Astuce :</strong> L'achat du cours complet vous fait économiser par rapport à l'achat module par module.
+                        </small>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Code promo -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0">🎟️ Code promotionnel</h5>
+                </div>
+                <div class="card-body">
+                    <form id="promoForm">
+                        {% csrf_token %}
+                        <div class="input-group mb-2">
+                            <input type="text" class="form-control" id="promoCode" placeholder="Entrez votre code">
+                            <button class="btn btn-outline-secondary" type="submit">
+                                Appliquer
+                            </button>
+                        </div>
+                        <small class="text-muted">Les codes promo sont appliqués automatiquement au moment de l'achat</small>
+                    </form>
+                    <div id="promoResult" class="mt-2"></div>
+                </div>
+            </div>
+            
+            <!-- Informations sur le cours -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="mb-0">ℹ️ Informations</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li><strong>Niveau :</strong> {{ course.get_difficulty_display }}</li>
+                        <li><strong>Langue :</strong> {{ course.get_language_display }}</li>
+                        <li><strong>Durée estimée :</strong> {{ course.total_duration|floatformat:1 }}h</li>
+                        <li><strong>Instructeur :</strong> {{ course.instructor.get_full_name }}</li>
+                        {% if course.max_students %}
+                            <li><strong>Places restantes :</strong> {{ course.max_students|sub:course.enrollment_count }}</li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Devises -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">💱 Devise</h5>
+                </div>
+                <div class="card-body">
+                    <select class="form-select" id="currencySelect">
+                        {% for currency in supported_currencies %}
+                            <option value="{{ currency.code }}" {% if currency.code == user_currency %}selected{% endif %}>
+                                {{ currency.symbol }} {{ currency.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <small class="text-muted mt-2 d-block">Les prix sont convertis en temps réel</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Gestion du code promo
+    document.getElementById('promoForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const code = document.getElementById('promoCode').value.trim();
+        const resultDiv = document.getElementById('promoResult');
+        
+        if (!code) {
+            resultDiv.innerHTML = '<div class="alert alert-warning small">Veuillez entrer un code promo</div>';
+            return;
+        }
+        
+        fetch('{% url "courses:apply_promotion_code" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({
+                code: code,
+                course_id: '{{ course.id }}'
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                resultDiv.innerHTML = `
+                    <div class="alert alert-success small">
+                        ✅ ${data.message}<br>
+                        <strong>Réduction: ${data.discount_amount.toFixed(0)} ${data.currency}</strong>
+                    </div>
+                `;
+                // Mettre à jour les prix affichés
+                location.reload();
+            } else {
+                resultDiv.innerHTML = `<div class="alert alert-danger small">${data.error}</div>`;
+            }
+        })
+        .catch(error => {
+            resultDiv.innerHTML = '<div class="alert alert-danger small">Erreur de connexion</div>';
+        });
+    });
+    
+    // Gestion des options d'échelonnement
+    document.querySelectorAll('.installment-option').forEach(option => {
+        option.addEventListener('click', function() {
+            // Désélectionner toutes les options
+            document.querySelectorAll('.installment-option').forEach(o => o.classList.remove('selected'));
+            
+            // Sélectionner cette option
+            this.classList.add('selected');
+            
+            // Activer le bouton
+            const btn = document.getElementById('selectInstallmentBtn');
+            const installments = this.dataset.installments;
+            btn.disabled = false;
+            btn.textContent = `Payer en ${installments} fois`;
+            btn.onclick = () => {
+                window.location.href = `{% url 'payments:course_payment' course.id %}?installments=${installments}`;
+            };
+        });
+    });
+    
+    // Changement de devise
+    document.getElementById('currencySelect').addEventListener('change', function() {
+        const currency = this.value;
+        const url = new URL(window.location);
+        url.searchParams.set('currency', currency);
+        window.location.href = url.toString();
+    });
+</script>
+{% endblock %}

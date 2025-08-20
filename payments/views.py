@@ -12,7 +12,7 @@ from django.core.exceptions import ValidationError
 from django.contrib.contenttypes.models import ContentType
 from .models import PaymentTransaction, PaymentConfiguration, WebhookEvent
 from .services import NotchpayService, WebhookProcessor, get_notchpay_service
-from courses.models import Course
+from courses.models import Course, Enrollment
 import json
 import logging
 
@@ -94,16 +94,16 @@ def course_order_summary(request, course_id):
     course = get_object_or_404(Course, id=course_id)
     
     # Vérifier si l'utilisateur n'est pas déjà inscrit
-    if request.user.enrolled_courses.filter(id=course.id).exists():
+    if Enrollment.objects.filter(user=request.user, course=course).exists():
         messages.info(request, "Vous êtes déjà inscrit à ce cours")
-        return redirect('courses:course_detail', course_id=course.id)
+        return redirect('courses:course_detail', slug=course.slug)
     
     # Vérifier si le cours est gratuit
     if course.price == 0:
         # Inscription directe pour les cours gratuits
         course.enrollments.create(user=request.user)
         messages.success(request, f"Vous êtes maintenant inscrit au cours {course.title}")
-        return redirect('courses:course_detail', course_id=course.id)
+        return redirect('courses:course_detail', slug=course.slug)
     
     context = {
         'course': course,
@@ -118,16 +118,16 @@ def course_payment(request, course_id):
     course = get_object_or_404(Course, id=course_id)
     
     # Vérifier si l'utilisateur n'est pas déjà inscrit
-    if request.user.enrolled_courses.filter(id=course.id).exists():
+    if Enrollment.objects.filter(user=request.user, course=course).exists():
         messages.info(request, "Vous êtes déjà inscrit à ce cours")
-        return redirect('courses:course_detail', course_id=course.id)
+        return redirect('courses:course_detail', slug=course.slug)
     
     # Vérifier si le cours est gratuit
     if course.price == 0:
         # Inscription directe pour les cours gratuits
         course.enrollments.create(user=request.user)
         messages.success(request, f"Vous êtes maintenant inscrit au cours {course.title}")
-        return redirect('courses:course_detail', course_id=course.id)
+        return redirect('courses:course_detail', slug=course.slug)
     
     if request.method == 'POST':
         try:

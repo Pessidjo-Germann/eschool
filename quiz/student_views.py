@@ -21,7 +21,8 @@ from courses.models import Course, Lesson
 def quiz_list(request):
     """Liste des quiz disponibles pour l'étudiant"""
     # Quiz auxquels l'étudiant a accès via ses cours inscrits
-    enrolled_courses = request.user.enrolled_courses.all()
+    from courses.models import Enrollment
+    enrolled_courses = [enrollment.course for enrollment in Enrollment.objects.filter(user=request.user).select_related('course')]
     
     # Quiz publiés des cours auxquels l'étudiant est inscrit
     available_quizzes = Quiz.objects.filter(
@@ -81,8 +82,8 @@ def quiz_list(request):
         'current_course': course_filter,
         'current_difficulty': difficulty_filter,
         'current_quiz_type': quiz_type_filter,
-        'difficulty_choices': Quiz.DIFFICULTY_CHOICES,
-        'quiz_type_choices': Quiz.QUIZ_TYPE_CHOICES,
+        'difficulty_choices': Quiz.DIFFICULTY_LEVELS,
+        'quiz_type_choices': Quiz.QUIZ_TYPES,
     }
     
     return render(request, 'quiz/student/quiz_list.html', context)

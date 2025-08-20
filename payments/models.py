@@ -10,6 +10,165 @@ import json
 User = get_user_model()
 
 
+class Invoice(models.Model):
+    """Modèle pour les factures générées automatiquement"""
+    
+    INVOICE_STATUS_CHOICES = [
+        ('draft', 'Brouillon'),
+        ('sent', 'Envoyée'),
+        ('paid', 'Payée'),
+        ('cancelled', 'Annulée'),
+    ]
+    
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    invoice_number = models.CharField(
+        max_length=50, 
+        unique=True,
+        help_text="Numéro de facture généré automatiquement"
+    )
+    
+    # Relations
+    transaction = models.OneToOneField(
+        'PaymentTransaction',
+        on_delete=models.CASCADE,
+        related_name='invoice',
+        help_text="Transaction associée à cette facture"
+    )
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='invoices'
+    )
+    
+    # Informations de facturation
+    billing_name = models.CharField(max_length=200)
+    billing_email = models.EmailField()
+    billing_phone = models.CharField(max_length=20, blank=True)
+    billing_address = models.TextField(blank=True)
+    billing_city = models.CharField(max_length=100, blank=True)
+    billing_country = models.CharField(max_length=100, default='Cameroun')
+    
+    # Détails financiers
+    subtotal = models.DecimalField(max_digits=10, decimal_places=2)
+    tax_rate = models.DecimalField(max_digits=5, decimal_places=4, default=0.0)
+    tax_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    currency = models.CharField(max_length=3, default='XAF')
+    
+    # Statut et dates
+    status = models.CharField(
+        max_length=20,
+        choices=INVOICE_STATUS_CHOICES,
+        default='draft'
+    )
+    issue_date = models.DateField(auto_now_add=True)
+    due_date = models.DateField()
+    paid_date = models.DateField(null=True, blank=True)
+    
+    # Fichiers générés
+    pdf_file = models.FileField(
+        upload_to='invoices/pdf/',
+        null=True, blank=True,
+        help_text="Fichier PDF de la facture"
+    )
+    
+    # Métadonnées
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    # Suivi email
+    email_sent = models.BooleanField(default=False)
+    email_sent_at = models.DateTimeField(null=True, blank=True)
+    email_opened = models.BooleanField(default=False)
+    email_opened_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        verbose_name = "Facture"
+        verbose_name_plural = "Factures"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['invoice_number']),
+            models.Index(fields=['user', 'status']),
+            models.Index(fields=['issue_date', 'status']),
+            models.Index(fields=['status', 'created_at']),
+        ]
+    
+    def __str__(self):
+        return f"Facture {self.invoice_number} - {self.billing_name}"
+    
+    def save(self, *args, **kwargs):
+        if not self.invoice_number:
+            self.invoice_number = self._generate_invoice_number()
+        
+        # Calculer automatiquement les totaux
+        if self.subtotal:
+            self.tax_amount = self.subtotal * self.tax_rate
+            self.total_amount = self.subtotal + self.tax_amount
+        
+        # Définir la date d'échéance (30 jours par défaut)
+        if not self.due_date:
+            from datetime import date, timedelta
+            self.due_date = date.today() + timedelta(days=30)
+        
+        super().save(*args, **kwargs)
+    
+    def _generate_invoice_number(self):
+        """Générer un numéro de facture unique"""
+        from datetime import date
+        today = date.today()
+        year = today.year
+        month = today.month
+        
+        # Format: INV-YYYY-MM-XXXX
+        prefix = f"INV-{year}-{month:02d}"
+        
+        # Compter les factures du mois
+        count = Invoice.objects.filter(
+            invoice_number__startswith=prefix
+        ).count() + 1
+        
+        return f"{prefix}-{count:04d}"
+    
+    @property
+    def is_overdue(self):
+        """Vérifier si la facture est en retard"""
+        from datetime import date
+        return self.status != 'paid' and self.due_date < date.today()
+    
+    @property
+    def days_until_due(self):
+        """Nombre de jours avant l'échéance"""
+        from datetime import date
+        if self.status == 'paid':
+            return 0
+        delta = self.due_date - date.today()
+        return delta.days
+    
+    def mark_as_paid(self):
+        """Marquer la facture comme payée"""
+        from datetime import date
+        self.status = 'paid'
+        self.paid_date = date.today()
+        self.save()
+    
+    def mark_email_sent(self):
+        """Marquer l'email comme envoyé"""
+        from django.utils import timezone
+        self.email_sent = True
+        self.email_sent_at = timezone.now()
+        if self.status == 'draft':
+            self.status = 'sent'
+        self.save()
+    
+    def mark_email_opened(self):
+        """Marquer l'email comme ouvert"""
+        from django.utils import timezone
+        self.email_opened = True
+        self.email_opened_at = timezone.now()
+        self.save()
+
+
 class PaymentTransaction(models.Model):
     """Modèle principal pour les transactions de paiement Notchpay"""
     

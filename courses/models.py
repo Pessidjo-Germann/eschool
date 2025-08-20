@@ -2,6 +2,9 @@ from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.urls import reverse
 from django.utils.text import slugify
+from django.utils import timezone
+from django.core.exceptions import ValidationError
+from decimal import Decimal
 from users.models import User
 import uuid
 
@@ -600,6 +603,7 @@ class Enrollment(models.Model):
     """Inscriptions des utilisateurs aux cours"""
     STATUS_CHOICES = [
         ('active', 'Actif'),
+        ('trial', 'Essai gratuit'),
         ('completed', 'Terminé'),
         ('dropped', 'Abandonné'),
         ('expired', 'Expiré'),
@@ -629,6 +633,10 @@ class Enrollment(models.Model):
     started_at = models.DateTimeField(blank=True, null=True, verbose_name="Date de début")
     completed_at = models.DateTimeField(blank=True, null=True, verbose_name="Date de completion")
     last_accessed = models.DateTimeField(blank=True, null=True, verbose_name="Dernier accès")
+    
+    # Période d'essai
+    trial_end_date = models.DateTimeField(blank=True, null=True, verbose_name="Fin de l'essai")
+    trial_converted_at = models.DateTimeField(blank=True, null=True, verbose_name="Conversion essai")
     
     # Progression
     progress_percentage = models.FloatField(default=0.0, verbose_name="Pourcentage de progression")
@@ -766,3 +774,606 @@ class CourseReview(models.Model):
     
     def __str__(self):
         return f"{self.user.username} - {self.course.title} ({self.rating}★)"
+
+
+# ==================== MODÈLES DE TARIFICATION ====================
+
+class Currency(models.Model):
+    """Devises supportées pour les paiements"""
+    code = models.CharField(max_length=3, unique=True, verbose_name="Code devise")  # USD, EUR, XAF
+    name = models.CharField(max_length=50, verbose_name="Nom")  # Dollar américain, Euro
+    symbol = models.CharField(max_length=5, verbose_name="Symbole")  # $, €, FCFA
+    is_active = models.BooleanField(default=True, verbose_name="Active")
+    exchange_rate_to_base = models.DecimalField(
+        max_digits=10, 
+        decimal_places=4, 
+        default=1.0000,
+        help_text="Taux de change vers la devise de base (XAF)",
+        verbose_name="Taux de change"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Devise"
+        verbose_name_plural = "Devises"
+        ordering = ['name']
+    
+    def __str__(self):
+        return f"{self.code} - {self.name}"
+
+
+class PricingTier(models.Model):
+    """Niveaux de tarification pour différents marchés"""
+    name = models.CharField(max_length=100, verbose_name="Nom")
+    description = models.TextField(blank=True, verbose_name="Description")
+    countries = models.JSONField(
+        default=list,
+        help_text="Codes pays ISO où ce niveau s'applique (ex: ['CM', 'SN', 'CI'])",
+        verbose_name="Pays"
+    )
+    discount_percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        verbose_name="Pourcentage de réduction"
+    )
+    is_active = models.BooleanField(default=True, verbose_name="Actif")
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = "Niveau de tarification"
+        verbose_name_plural = "Niveaux de tarification"
+        ordering = ['name']
+    
+    def __str__(self):
+        return self.name
+
+
+class PricingModel(models.Model):
+    """Modèles de tarification pour les cours"""
+    PRICING_TYPES = [
+        ('one_time', 'Paiement unique'),
+        ('subscription', 'Abonnement'),
+        ('per_module', 'Par module'),
+        ('tiered', 'Prix échelonnés'),
+        ('freemium', 'Freemium'),
+        ('bundle', 'Bundle/Pack'),
+    ]
+    
+    course = models.OneToOneField(
+        Course,
+        on_delete=models.CASCADE,
+        related_name='pricing_model',
+        verbose_name="Cours"
+    )
+    pricing_type = models.CharField(
+        max_length=20,
+        choices=PRICING_TYPES,
+        default='one_time',
+        verbose_name="Type de tarification"
+    )
+    
+    # Prix de base et devises
+    base_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        validators=[MinValueValidator(0)],
+        verbose_name="Prix de base"
+    )
+    base_currency = models.ForeignKey(
+        Currency,
+        on_delete=models.CASCADE,
+        default=1,  # XAF par défaut
+        verbose_name="Devise de base"
+    )
+    
+    # Période d'essai gratuite
+    has_free_trial = models.BooleanField(default=False, verbose_name="Essai gratuit")
+    trial_duration_days = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        validators=[MinValueValidator(1), MaxValueValidator(365)],
+        verbose_name="Durée essai (jours)"
+    )
+    trial_access_type = models.CharField(
+        max_length=20,
+        choices=[
+            ('preview', 'Aperçu seulement'),
+            ('first_module', 'Premier module'),
+            ('limited_time', 'Accès limité dans le temps'),
+            ('full_access', 'Accès complet'),
+        ],
+        default='preview',
+        blank=True,
+        verbose_name="Type d'accès en essai"
+    )
+    
+    # Tarification par modules
+    allow_individual_modules = models.BooleanField(
+        default=False,
+        verbose_name="Autoriser achat par module"
+    )
+    module_price_percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=20.00,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        help_text="Pourcentage du prix total par module",
+        verbose_name="% prix par module"
+    )
+    
+    # Abonnement (si applicable)
+    subscription_period = models.CharField(
+        max_length=20,
+        choices=[
+            ('monthly', 'Mensuel'),
+            ('quarterly', 'Trimestriel'),
+            ('yearly', 'Annuel'),
+        ],
+        blank=True,
+        verbose_name="Période d'abonnement"
+    )
+    
+    # Configuration avancée
+    supports_installments = models.BooleanField(
+        default=False,
+        verbose_name="Paiement échelonné"
+    )
+    max_installments = models.PositiveIntegerField(
+        default=3,
+        validators=[MinValueValidator(2), MaxValueValidator(12)],
+        verbose_name="Maximum d'échéances"
+    )
+    
+    # Métadonnées
+    is_active = models.BooleanField(default=True, verbose_name="Actif")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Modèle de tarification"
+        verbose_name_plural = "Modèles de tarification"
+    
+    def __str__(self):
+        return f"{self.course.title} - {self.get_pricing_type_display()}"
+    
+    def clean(self):
+        """Validation du modèle"""
+        if self.has_free_trial and not self.trial_duration_days:
+            raise ValidationError("La durée d'essai est obligatoire si l'essai gratuit est activé")
+        
+        if self.pricing_type == 'subscription' and not self.subscription_period:
+            raise ValidationError("La période d'abonnement est obligatoire pour ce type")
+    
+    def get_price_for_currency(self, currency_code):
+        """Convertit le prix de base dans la devise demandée"""
+        if currency_code == self.base_currency.code:
+            return self.base_price
+        
+        try:
+            target_currency = Currency.objects.get(code=currency_code, is_active=True)
+            # Conversion: prix_base / taux_base * taux_cible
+            converted_price = (self.base_price / self.base_currency.exchange_rate_to_base) * target_currency.exchange_rate_to_base
+            return round(converted_price, 2)
+        except Currency.DoesNotExist:
+            return self.base_price
+    
+    def get_module_price(self, currency_code=None):
+        """Prix d'un module individuel"""
+        if not self.allow_individual_modules:
+            return None
+        
+        total_price = self.get_price_for_currency(currency_code or self.base_currency.code)
+        module_price = total_price * (self.module_price_percentage / 100)
+        return round(module_price, 2)
+
+
+class CourseBundle(models.Model):
+    """Bundles/Packs de cours avec prix groupés"""
+    name = models.CharField(max_length=200, verbose_name="Nom du bundle")
+    slug = models.SlugField(max_length=250, unique=True, blank=True)
+    description = models.TextField(verbose_name="Description")
+    courses = models.ManyToManyField(
+        Course,
+        related_name='bundles',
+        verbose_name="Cours inclus"
+    )
+    
+    # Prix et devises
+    price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(0)],
+        verbose_name="Prix du bundle"
+    )
+    currency = models.ForeignKey(
+        Currency,
+        on_delete=models.CASCADE,
+        verbose_name="Devise"
+    )
+    
+    # Économies et promotions
+    individual_total_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        help_text="Calculé automatiquement",
+        verbose_name="Prix total individuel"
+    )
+    savings_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        help_text="Calculé automatiquement",
+        verbose_name="Montant économisé"
+    )
+    savings_percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0,
+        help_text="Calculé automatiquement",
+        verbose_name="% d'économie"
+    )
+    
+    # Configuration
+    is_active = models.BooleanField(default=True, verbose_name="Actif")
+    valid_from = models.DateTimeField(default=timezone.now, verbose_name="Valide à partir du")
+    valid_until = models.DateTimeField(blank=True, null=True, verbose_name="Valide jusqu'au")
+    max_purchases = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        verbose_name="Achats maximum"
+    )
+    current_purchases = models.PositiveIntegerField(default=0, verbose_name="Achats actuels")
+    
+    # Média
+    thumbnail = models.ImageField(
+        upload_to='bundles/thumbnails/',
+        blank=True,
+        null=True,
+        verbose_name="Image"
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Bundle de cours"
+        verbose_name_plural = "Bundles de cours"
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return self.name
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        
+        # Calculer les économies
+        self.calculate_savings()
+        super().save(*args, **kwargs)
+    
+    def calculate_savings(self):
+        """Calcule les économies du bundle"""
+        total = sum(course.price or 0 for course in self.courses.all())
+        if total > 0:
+            self.individual_total_price = total
+            self.savings_amount = max(0, total - self.price)
+            self.savings_percentage = (self.savings_amount / total) * 100
+        else:
+            self.individual_total_price = 0
+            self.savings_amount = 0
+            self.savings_percentage = 0
+    
+    @property
+    def is_valid(self):
+        """Vérifie si le bundle est encore valide"""
+        now = timezone.now()
+        if self.valid_until and now > self.valid_until:
+            return False
+        if self.max_purchases and self.current_purchases >= self.max_purchases:
+            return False
+        return self.is_active
+    
+    @property
+    def courses_count(self):
+        return self.courses.count()
+
+
+class PromotionCode(models.Model):
+    """Codes de réduction et promotions"""
+    DISCOUNT_TYPES = [
+        ('percentage', 'Pourcentage'),
+        ('fixed_amount', 'Montant fixe'),
+        ('free_trial_extended', 'Essai gratuit étendu'),
+        ('free_access', 'Accès gratuit'),
+    ]
+    
+    USAGE_TYPES = [
+        ('single', 'Usage unique'),
+        ('multiple', 'Usages multiples'),
+        ('unlimited', 'Illimité'),
+    ]
+    
+    # Identification
+    code = models.CharField(
+        max_length=50,
+        unique=True,
+        verbose_name="Code promo"
+    )
+    name = models.CharField(max_length=200, verbose_name="Nom de la promotion")
+    description = models.TextField(blank=True, verbose_name="Description")
+    
+    # Type de réduction
+    discount_type = models.CharField(
+        max_length=20,
+        choices=DISCOUNT_TYPES,
+        verbose_name="Type de réduction"
+    )
+    discount_value = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(0)],
+        verbose_name="Valeur de la réduction"
+    )
+    max_discount_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        help_text="Montant maximum de réduction (pour les pourcentages)",
+        verbose_name="Réduction maximum"
+    )
+    
+    # Éligibilité
+    applicable_courses = models.ManyToManyField(
+        Course,
+        blank=True,
+        related_name='promotion_codes',
+        verbose_name="Cours applicables"
+    )
+    applicable_bundles = models.ManyToManyField(
+        CourseBundle,
+        blank=True,
+        related_name='promotion_codes',
+        verbose_name="Bundles applicables"
+    )
+    minimum_purchase_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0,
+        verbose_name="Montant minimum d'achat"
+    )
+    
+    # Utilisateurs éligibles
+    eligible_users = models.ManyToManyField(
+        'users.User',
+        blank=True,
+        related_name='available_promotions',
+        verbose_name="Utilisateurs éligibles"
+    )
+    new_users_only = models.BooleanField(
+        default=False,
+        verbose_name="Nouveaux utilisateurs seulement"
+    )
+    
+    # Limites d'usage
+    usage_type = models.CharField(
+        max_length=20,
+        choices=USAGE_TYPES,
+        default='multiple',
+        verbose_name="Type d'usage"
+    )
+    max_uses = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        verbose_name="Utilisations maximum"
+    )
+    max_uses_per_user = models.PositiveIntegerField(
+        default=1,
+        verbose_name="Usage max par utilisateur"
+    )
+    current_uses = models.PositiveIntegerField(default=0, verbose_name="Utilisations actuelles")
+    
+    # Validité temporelle
+    valid_from = models.DateTimeField(verbose_name="Valide à partir du")
+    valid_until = models.DateTimeField(verbose_name="Valide jusqu'au")
+    
+    # Configuration
+    is_active = models.BooleanField(default=True, verbose_name="Actif")
+    is_combinable = models.BooleanField(
+        default=False,
+        verbose_name="Combinable avec d'autres codes"
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Code de promotion"
+        verbose_name_plural = "Codes de promotion"
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.code} - {self.name}"
+    
+    def clean(self):
+        """Validation du modèle"""
+        if self.valid_until <= self.valid_from:
+            raise ValidationError("La date de fin doit être postérieure à la date de début")
+        
+        if self.discount_type == 'percentage' and self.discount_value > 100:
+            raise ValidationError("Le pourcentage ne peut pas dépasser 100%")
+    
+    @property
+    def is_valid(self):
+        """Vérifie si le code promo est encore valide"""
+        now = timezone.now()
+        if not self.is_active:
+            return False
+        if now < self.valid_from or now > self.valid_until:
+            return False
+        if self.max_uses and self.current_uses >= self.max_uses:
+            return False
+        return True
+    
+    def can_be_used_by(self, user, course=None, bundle=None):
+        """Vérifie si un utilisateur peut utiliser ce code"""
+        if not self.is_valid:
+            return False, "Code promo expiré ou inactif"
+        
+        # Vérifier si l'utilisateur a déjà utilisé ce code
+        user_usage = PromotionCodeUsage.objects.filter(
+            promotion_code=self,
+            user=user
+        ).count()
+        
+        if user_usage >= self.max_uses_per_user:
+            return False, f"Vous avez déjà utilisé ce code {self.max_uses_per_user} fois"
+        
+        # Vérifier nouveaux utilisateurs seulement
+        if self.new_users_only:
+            if Enrollment.objects.filter(user=user).exists():
+                return False, "Ce code est réservé aux nouveaux utilisateurs"
+        
+        # Vérifier éligibilité utilisateurs
+        if self.eligible_users.exists() and user not in self.eligible_users.all():
+            return False, "Vous n'êtes pas éligible à cette promotion"
+        
+        # Vérifier cours/bundle applicable
+        if course:
+            if self.applicable_courses.exists() and course not in self.applicable_courses.all():
+                return False, "Ce code ne s'applique pas à ce cours"
+        
+        if bundle:
+            if self.applicable_bundles.exists() and bundle not in self.applicable_bundles.all():
+                return False, "Ce code ne s'applique pas à ce bundle"
+        
+        return True, "Code valide"
+    
+    def calculate_discount(self, original_price, currency_code='XAF'):
+        """Calcule la réduction à appliquer"""
+        if self.discount_type == 'percentage':
+            discount = original_price * (self.discount_value / 100)
+            if self.max_discount_amount:
+                discount = min(discount, self.max_discount_amount)
+        elif self.discount_type == 'fixed_amount':
+            discount = self.discount_value
+        elif self.discount_type == 'free_access':
+            discount = original_price
+        else:
+            discount = 0
+        
+        return min(discount, original_price)
+
+
+class PromotionCodeUsage(models.Model):
+    """Historique d'utilisation des codes promo"""
+    promotion_code = models.ForeignKey(
+        PromotionCode,
+        on_delete=models.CASCADE,
+        related_name='usages',
+        verbose_name="Code promo"
+    )
+    user = models.ForeignKey(
+        'users.User',
+        on_delete=models.CASCADE,
+        related_name='promotion_usages',
+        verbose_name="Utilisateur"
+    )
+    course = models.ForeignKey(
+        Course,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        verbose_name="Cours"
+    )
+    bundle = models.ForeignKey(
+        CourseBundle,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        verbose_name="Bundle"
+    )
+    
+    original_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        verbose_name="Prix original"
+    )
+    discount_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        verbose_name="Montant de la réduction"
+    )
+    final_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        verbose_name="Prix final"
+    )
+    currency = models.CharField(max_length=3, verbose_name="Devise")
+    
+    used_at = models.DateTimeField(auto_now_add=True, verbose_name="Utilisé le")
+    transaction_reference = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name="Référence transaction"
+    )
+    
+    class Meta:
+        verbose_name = "Utilisation de code promo"
+        verbose_name_plural = "Utilisations de codes promo"
+        ordering = ['-used_at']
+    
+    def __str__(self):
+        return f"{self.promotion_code.code} - {self.user.username}"
+
+
+class ModulePricing(models.Model):
+    """Tarification individuelle des modules"""
+    module = models.OneToOneField(
+        Module,
+        on_delete=models.CASCADE,
+        related_name='individual_pricing',
+        verbose_name="Module"
+    )
+    price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(0)],
+        verbose_name="Prix"
+    )
+    currency = models.ForeignKey(
+        Currency,
+        on_delete=models.CASCADE,
+        verbose_name="Devise"
+    )
+    is_available_individually = models.BooleanField(
+        default=True,
+        verbose_name="Disponible individuellement"
+    )
+    
+    # Prérequis pour l'achat individuel
+    requires_previous_modules = models.BooleanField(
+        default=False,
+        verbose_name="Nécessite les modules précédents"
+    )
+    prerequisite_modules = models.ManyToManyField(
+        Module,
+        blank=True,
+        related_name='unlocks_modules',
+        verbose_name="Modules prérequis"
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = "Tarification de module"
+        verbose_name_plural = "Tarifications de modules"
+    
+    def __str__(self):
+        return f"{self.module.title} - {self.price} {self.currency.code}"

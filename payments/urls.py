@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from . import financial_views
 
 app_name = 'payments'
 
@@ -24,4 +25,13 @@ urlpatterns = [
     
     # Administration
     path('admin/configuration/', views.PaymentConfigurationView.as_view(), name='configuration'),
+    
+    # Gestion financière
+    path('financial/dashboard/', financial_views.financial_dashboard, name='financial_dashboard'),
+    path('financial/reports/', financial_views.financial_reports, name='financial_reports'),
+    path('export/transactions-csv/', financial_views.export_transactions_csv, name='export_transactions_csv'),
+    path('export/accounting-data/', financial_views.export_accounting_data, name='export_accounting_data'),
+    path('invoices/<int:invoice_id>/pdf/', financial_views.download_invoice_pdf, name='download_invoice_pdf'),
+    path('invoices/<int:invoice_id>/send-email/', financial_views.send_invoice_email_view, name='send_invoice_email'),
+    path('api/financial-data/', financial_views.api_financial_data, name='api_financial_data'),
 ]

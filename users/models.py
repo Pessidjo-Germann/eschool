@@ -57,6 +57,29 @@ class User(AbstractUser):
     def is_admin(self):
         return self.role == 'admin'
     
+    @property
+    def enrolled_courses(self):
+        """Retourne les cours auxquels l'utilisateur est inscrit"""
+        from courses.models import Course
+        return Course.objects.filter(
+            enrollments__user=self,
+            enrollments__status='active'
+        ).distinct()
+    
+    @property
+    def active_enrollments(self):
+        """Retourne les inscriptions actives de l'utilisateur"""
+        return self.enrollments.filter(status='active')
+    
+    @property
+    def completed_courses(self):
+        """Retourne les cours terminés par l'utilisateur"""
+        from courses.models import Course
+        return Course.objects.filter(
+            enrollments__user=self,
+            enrollments__status='completed'
+        ).distinct()
+    
     def save(self, *args, **kwargs):
         # Set enrollment_date for students when created
         if self.role == 'student' and not self.enrollment_date and not self.pk:

@@ -1,0 +1,359 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Rapports financiers - eSchool{% endblock %}
+
+{% block extra_css %}
+<style>
+    .report-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    
+    .report-header {
+        border-bottom: 2px solid #3498db;
+        padding-bottom: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .customer-item {
+        display: flex;
+        justify-content: between;
+        align-items: center;
+        padding: 10px 0;
+        border-bottom: 1px solid #ecf0f1;
+    }
+    
+    .customer-item:last-child {
+        border-bottom: none;
+    }
+    
+    .chart-small {
+        max-height: 300px;
+    }
+    
+    .invoice-badge {
+        font-size: 0.8rem;
+        padding: 4px 8px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">📋 Rapports financiers {{ current_year }}</h1>
+        <div class="btn-group">
+            <a href="{% url 'payments:financial_dashboard' %}" class="btn btn-outline-primary">
+                <i class="fas fa-chart-line"></i> Tableau de bord
+            </a>
+            <button type="button" class="btn btn-primary" onclick="window.print()">
+                <i class="fas fa-print"></i> Imprimer
+            </button>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Revenus mensuels -->
+        <div class="col-md-8">
+            <div class="report-card">
+                <div class="report-header">
+                    <h5 class="mb-0">📈 Revenus mensuels {{ current_year }}</h5>
+                </div>
+                <canvas id="monthlyRevenueChart" class="chart-small"></canvas>
+                
+                <div class="mt-4">
+                    <h6>Détails par mois</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Mois</th>
+                                    <th class="text-end">Revenus</th>
+                                    <th class="text-end">Transactions</th>
+                                    <th class="text-end">Moyenne</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for month in monthly_revenue %}
+                                <tr>
+                                    <td>{{ month.month|date:"F Y" }}</td>
+                                    <td class="text-end">{{ month.revenue|floatformat:0 }} FCFA</td>
+                                    <td class="text-end">{{ month.count }}</td>
+                                    <td class="text-end">
+                                        {% if month.count > 0 %}
+                                            {{ month.revenue|div:month.count|floatformat:0 }} FCFA
+                                        {% else %}
+                                            0 FCFA
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">Aucune donnée disponible</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Statistiques des factures -->
+        <div class="col-md-4">
+            <div class="report-card">
+                <div class="report-header">
+                    <h5 class="mb-0">🧾 Statut des factures</h5>
+                </div>
+                <canvas id="invoiceStatusChart" class="chart-small"></canvas>
+                
+                <div class="mt-4">
+                    {% for stat in invoice_stats %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span>
+                            {% if stat.status == 'draft' %}
+                                <span class="badge bg-secondary invoice-badge">Brouillon</span>
+                            {% elif stat.status == 'sent' %}
+                                <span class="badge bg-info invoice-badge">Envoyée</span>
+                            {% elif stat.status == 'paid' %}
+                                <span class="badge bg-success invoice-badge">Payée</span>
+                            {% elif stat.status == 'cancelled' %}
+                                <span class="badge bg-danger invoice-badge">Annulée</span>
+                            {% endif %}
+                        </span>
+                        <div class="text-end">
+                            <div><strong>{{ stat.count }}</strong> factures</div>
+                            <small class="text-muted">{{ stat.amount|default:0|floatformat:0 }} FCFA</small>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted text-center">Aucune facture</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top clients -->
+    <div class="row">
+        <div class="col-12">
+            <div class="report-card">
+                <div class="report-header">
+                    <h5 class="mb-0">👑 Top 10 clients (12 derniers mois)</h5>
+                </div>
+                
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Client</th>
+                                <th>Email</th>
+                                <th class="text-end">Total dépensé</th>
+                                <th class="text-end">Transactions</th>
+                                <th class="text-end">Moyenne par transaction</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for customer in top_customers %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td>
+                                    <strong>{{ customer.user__first_name }} {{ customer.user__last_name }}</strong>
+                                    {% if forloop.counter <= 3 %}
+                                        {% if forloop.counter == 1 %}🥇{% elif forloop.counter == 2 %}🥈{% else %}🥉{% endif %}
+                                    {% endif %}
+                                </td>
+                                <td>{{ customer.user__email }}</td>
+                                <td class="text-end">
+                                    <strong class="text-success">{{ customer.total_spent|floatformat:0 }} FCFA</strong>
+                                </td>
+                                <td class="text-end">{{ customer.transaction_count }}</td>
+                                <td class="text-end">
+                                    {{ customer.total_spent|div:customer.transaction_count|floatformat:0 }} FCFA
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted">Aucun client trouvé</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Résumé de fin d'année -->
+    <div class="row">
+        <div class="col-12">
+            <div class="report-card">
+                <div class="report-header">
+                    <h5 class="mb-0">📊 Résumé {{ current_year }}</h5>
+                </div>
+                
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <div class="p-3">
+                            <h3 class="text-success mb-1">
+                                {% widthratio monthly_revenue.revenue 1 1 %}
+                                {{ monthly_revenue|length|default:0|floatformat:0 }}
+                            </h3>
+                            <p class="text-muted mb-0">Mois actifs</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3">
+                            <h3 class="text-primary mb-1">
+                                {% for month in monthly_revenue %}{{ month.revenue|add:0 }}{% empty %}0{% endfor %}
+                            </h3>
+                            <p class="text-muted mb-0">Revenus totaux</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3">
+                            <h3 class="text-info mb-1">
+                                {% for month in monthly_revenue %}{{ month.count|add:0 }}{% empty %}0{% endfor %}
+                            </h3>
+                            <p class="text-muted mb-0">Transactions</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="p-3">
+                            <h3 class="text-warning mb-1">{{ top_customers|length }}</h3>
+                            <p class="text-muted mb-0">Clients actifs</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Données pour les graphiques
+    const monthlyData = {
+        labels: [{% for month in monthly_revenue %}'{{ month.month|date:"M Y" }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+        revenues: [{% for month in monthly_revenue %}{{ month.revenue|default:0 }}{% if not forloop.last %},{% endif %}{% endfor %}],
+        counts: [{% for month in monthly_revenue %}{{ month.count|default:0 }}{% if not forloop.last %},{% endif %}{% endfor %}]
+    };
+    
+    const invoiceData = {
+        labels: [{% for stat in invoice_stats %}'{{ stat.status|title }}'{% if not forloop.last %},{% endif %}{% endfor %}],
+        data: [{% for stat in invoice_stats %}{{ stat.count|default:0 }}{% if not forloop.last %},{% endif %}{% endfor %}]
+    };
+
+    // Graphique des revenus mensuels
+    const monthlyRevenueCtx = document.getElementById('monthlyRevenueChart').getContext('2d');
+    new Chart(monthlyRevenueCtx, {
+        type: 'line',
+        data: {
+            labels: monthlyData.labels,
+            datasets: [{
+                label: 'Revenus (FCFA)',
+                data: monthlyData.revenues,
+                borderColor: '#3498db',
+                backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4
+            }, {
+                label: 'Transactions',
+                data: monthlyData.counts,
+                borderColor: '#2ecc71',
+                backgroundColor: 'rgba(46, 204, 113, 0.1)',
+                borderWidth: 2,
+                yAxisID: 'y1'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            scales: {
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: 'Revenus (FCFA)'
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: 'Transactions'
+                    },
+                    grid: {
+                        drawOnChartArea: false,
+                    },
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+
+    // Graphique des statuts de factures
+    const invoiceStatusCtx = document.getElementById('invoiceStatusChart').getContext('2d');
+    new Chart(invoiceStatusCtx, {
+        type: 'pie',
+        data: {
+            labels: invoiceData.labels,
+            datasets: [{
+                data: invoiceData.data,
+                backgroundColor: [
+                    '#6c757d', // draft
+                    '#17a2b8', // sent
+                    '#28a745', // paid
+                    '#dc3545'  // cancelled
+                ],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const total = context.dataset.data.reduce((sum, value) => sum + value, 0);
+                            const percentage = ((context.raw / total) * 100).toFixed(1);
+                            return context.label + ': ' + context.raw + ' (' + percentage + '%)';
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Fonction d'impression personnalisée
+    window.addEventListener('beforeprint', function() {
+        document.title = 'Rapport Financier eSchool - {{ current_year }}';
+    });
+</script>
+{% endblock %}

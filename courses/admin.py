@@ -3,7 +3,9 @@ from django.utils.html import format_html
 from django.utils import timezone
 from .models import (
     Category, Course, Tag, Module, Lesson, LessonResource,
-    Enrollment, CourseFavorite, LessonCompletion, CourseReview
+    Enrollment, CourseFavorite, LessonCompletion, CourseReview,
+    Currency, PricingTier, PricingModel, CourseBundle, 
+    PromotionCode, PromotionCodeUsage, ModulePricing
 )
 
 
@@ -435,3 +437,333 @@ class CourseReviewAdmin(admin.ModelAdmin):
     search_fields = ['user__username', 'course__title', 'title']
     list_editable = ['is_approved']
     readonly_fields = ['created_at', 'updated_at']
+
+
+# ==================== ADMINISTRATION TARIFICATION ====================
+
+@admin.register(Currency)
+class CurrencyAdmin(admin.ModelAdmin):
+    list_display = ['code', 'name', 'symbol', 'exchange_rate_to_base', 'is_active', 'updated_at']
+    list_filter = ['is_active', 'updated_at']
+    search_fields = ['code', 'name']
+    list_editable = ['exchange_rate_to_base', 'is_active']
+    ordering = ['name']
+    readonly_fields = ['created_at', 'updated_at']
+    
+    fieldsets = (
+        ('Informations de base', {
+            'fields': ('code', 'name', 'symbol', 'is_active')
+        }),
+        ('Taux de change', {
+            'fields': ('exchange_rate_to_base',),
+            'description': 'Taux de change vers la devise de base (XAF). 1 XAF = 1.0000'
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    actions = ['activate_currencies', 'deactivate_currencies']
+    
+    def activate_currencies(self, request, queryset):
+        updated = queryset.update(is_active=True)
+        self.message_user(request, f'{updated} devise(s) activée(s).')
+    activate_currencies.short_description = 'Activer les devises sélectionnées'
+    
+    def deactivate_currencies(self, request, queryset):
+        updated = queryset.update(is_active=False)
+        self.message_user(request, f'{updated} devise(s) désactivée(s).')
+    deactivate_currencies.short_description = 'Désactiver les devises sélectionnées'
+
+
+@admin.register(PricingTier)
+class PricingTierAdmin(admin.ModelAdmin):
+    list_display = ['name', 'discount_percentage', 'countries_display', 'is_active', 'created_at']
+    list_filter = ['is_active', 'created_at']
+    search_fields = ['name', 'description']
+    list_editable = ['discount_percentage', 'is_active']
+    readonly_fields = ['created_at']
+    
+    fieldsets = (
+        ('Informations de base', {
+            'fields': ('name', 'description', 'is_active')
+        }),
+        ('Configuration géographique', {
+            'fields': ('countries',),
+            'description': 'Liste des codes pays ISO (ex: ["CM", "SN", "CI"])'
+        }),
+        ('Réduction', {
+            'fields': ('discount_percentage',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at',),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def countries_display(self, obj):
+        if obj.countries:
+            return ', '.join(obj.countries)
+        return 'Aucun pays'
+    countries_display.short_description = 'Pays'
+
+
+class PricingModelInline(admin.StackedInline):
+    model = PricingModel
+    extra = 0
+    fieldsets = (
+        ('Configuration de base', {
+            'fields': ('pricing_type', 'base_price', 'base_currency', 'is_active')
+        }),
+        ('Essai gratuit', {
+            'fields': ('has_free_trial', 'trial_duration_days', 'trial_access_type'),
+            'classes': ('collapse',)
+        }),
+        ('Modules individuels', {
+            'fields': ('allow_individual_modules', 'module_price_percentage'),
+            'classes': ('collapse',)
+        }),
+        ('Abonnement', {
+            'fields': ('subscription_period',),
+            'classes': ('collapse',)
+        }),
+        ('Paiement échelonné', {
+            'fields': ('supports_installments', 'max_installments'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(PricingModel)
+class PricingModelAdmin(admin.ModelAdmin):
+    list_display = [
+        'course', 'pricing_type', 'base_price', 'base_currency', 
+        'has_free_trial', 'allow_individual_modules', 'is_active'
+    ]
+    list_filter = [
+        'pricing_type', 'base_currency', 'has_free_trial', 
+        'allow_individual_modules', 'is_active'
+    ]
+    search_fields = ['course__title']
+    readonly_fields = ['created_at', 'updated_at']
+    
+    fieldsets = (
+        ('Configuration de base', {
+            'fields': ('course', 'pricing_type', 'base_price', 'base_currency', 'is_active')
+        }),
+        ('Essai gratuit', {
+            'fields': ('has_free_trial', 'trial_duration_days', 'trial_access_type'),
+            'classes': ('collapse',)
+        }),
+        ('Modules individuels', {
+            'fields': ('allow_individual_modules', 'module_price_percentage'),
+            'classes': ('collapse',)
+        }),
+        ('Abonnement', {
+            'fields': ('subscription_period',),
+            'classes': ('collapse',)
+        }),
+        ('Paiement échelonné', {
+            'fields': ('supports_installments', 'max_installments'),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(CourseBundle)
+class CourseBundleAdmin(admin.ModelAdmin):
+    list_display = [
+        'name', 'price', 'currency', 'courses_count_display', 'savings_amount', 
+        'savings_percentage', 'is_valid_display', 'current_purchases'
+    ]
+    list_filter = ['is_active', 'currency', 'created_at']
+    search_fields = ['name', 'description']
+    filter_horizontal = ['courses']
+    prepopulated_fields = {'slug': ('name',)}
+    readonly_fields = [
+        'individual_total_price', 'savings_amount', 'savings_percentage',
+        'created_at', 'updated_at'
+    ]
+    
+    fieldsets = (
+        ('Informations de base', {
+            'fields': ('name', 'slug', 'description', 'thumbnail')
+        }),
+        ('Cours inclus', {
+            'fields': ('courses',)
+        }),
+        ('Prix et économies', {
+            'fields': ('price', 'currency', 'individual_total_price', 'savings_amount', 'savings_percentage')
+        }),
+        ('Configuration', {
+            'fields': ('is_active', 'valid_from', 'valid_until', 'max_purchases', 'current_purchases')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def courses_count_display(self, obj):
+        return obj.courses_count
+    courses_count_display.short_description = 'Nb cours'
+    
+    def is_valid_display(self, obj):
+        if obj.is_valid:
+            return format_html('<span style="color: green;">✅ Valide</span>')
+        return format_html('<span style="color: red;">❌ Invalide</span>')
+    is_valid_display.short_description = 'Statut'
+    
+    actions = ['calculate_savings', 'activate_bundles', 'deactivate_bundles']
+    
+    def calculate_savings(self, request, queryset):
+        count = 0
+        for bundle in queryset:
+            bundle.calculate_savings()
+            bundle.save()
+            count += 1
+        self.message_user(request, f'Économies recalculées pour {count} bundle(s).')
+    calculate_savings.short_description = 'Recalculer les économies'
+    
+    def activate_bundles(self, request, queryset):
+        updated = queryset.update(is_active=True)
+        self.message_user(request, f'{updated} bundle(s) activé(s).')
+    activate_bundles.short_description = 'Activer les bundles'
+    
+    def deactivate_bundles(self, request, queryset):
+        updated = queryset.update(is_active=False)
+        self.message_user(request, f'{updated} bundle(s) désactivé(s).')
+    deactivate_bundles.short_description = 'Désactiver les bundles'
+
+
+@admin.register(PromotionCode)
+class PromotionCodeAdmin(admin.ModelAdmin):
+    list_display = [
+        'code', 'name', 'discount_type', 'discount_value', 'current_uses',
+        'max_uses', 'is_valid_display', 'valid_until'
+    ]
+    list_filter = [
+        'discount_type', 'is_active', 'new_users_only', 
+        'valid_from', 'valid_until'
+    ]
+    search_fields = ['code', 'name', 'description']
+    filter_horizontal = ['applicable_courses', 'applicable_bundles', 'eligible_users']
+    readonly_fields = ['current_uses', 'created_at', 'updated_at']
+    
+    fieldsets = (
+        ('Informations de base', {
+            'fields': ('code', 'name', 'description', 'is_active')
+        }),
+        ('Type de réduction', {
+            'fields': ('discount_type', 'discount_value', 'max_discount_amount')
+        }),
+        ('Éligibilité', {
+            'fields': (
+                'applicable_courses', 'applicable_bundles', 
+                'minimum_purchase_amount', 'eligible_users', 'new_users_only'
+            )
+        }),
+        ('Limites d\'usage', {
+            'fields': ('usage_type', 'max_uses', 'max_uses_per_user', 'current_uses')
+        }),
+        ('Validité temporelle', {
+            'fields': ('valid_from', 'valid_until')
+        }),
+        ('Configuration avancée', {
+            'fields': ('is_combinable',),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def is_valid_display(self, obj):
+        if obj.is_valid:
+            return format_html('<span style="color: green;">✅ Valide</span>')
+        return format_html('<span style="color: red;">❌ Expiré</span>')
+    is_valid_display.short_description = 'Statut'
+    
+    actions = ['activate_codes', 'deactivate_codes', 'reset_usage_count']
+    
+    def activate_codes(self, request, queryset):
+        updated = queryset.update(is_active=True)
+        self.message_user(request, f'{updated} code(s) activé(s).')
+    activate_codes.short_description = 'Activer les codes'
+    
+    def deactivate_codes(self, request, queryset):
+        updated = queryset.update(is_active=False)
+        self.message_user(request, f'{updated} code(s) désactivé(s).')
+    deactivate_codes.short_description = 'Désactiver les codes'
+    
+    def reset_usage_count(self, request, queryset):
+        updated = queryset.update(current_uses=0)
+        self.message_user(request, f'Compteur d\'usage remis à zéro pour {updated} code(s).')
+    reset_usage_count.short_description = 'Remettre compteur à zéro'
+
+
+@admin.register(PromotionCodeUsage)
+class PromotionCodeUsageAdmin(admin.ModelAdmin):
+    list_display = [
+        'promotion_code', 'user', 'course', 'bundle', 
+        'original_price', 'discount_amount', 'final_price', 'used_at'
+    ]
+    list_filter = ['used_at', 'currency', 'promotion_code__discount_type']
+    search_fields = [
+        'promotion_code__code', 'user__username', 'user__email',
+        'course__title', 'bundle__name', 'transaction_reference'
+    ]
+    readonly_fields = ['used_at']
+    
+    fieldsets = (
+        ('Utilisation', {
+            'fields': ('promotion_code', 'user', 'course', 'bundle', 'used_at')
+        }),
+        ('Détails financiers', {
+            'fields': ('original_price', 'discount_amount', 'final_price', 'currency')
+        }),
+        ('Transaction', {
+            'fields': ('transaction_reference',)
+        }),
+    )
+    
+    def has_add_permission(self, request):
+        return False  # Les usages sont créés automatiquement
+
+
+@admin.register(ModulePricing)
+class ModulePricingAdmin(admin.ModelAdmin):
+    list_display = [
+        'module', 'price', 'currency', 'is_available_individually',
+        'requires_previous_modules'
+    ]
+    list_filter = ['currency', 'is_available_individually', 'requires_previous_modules']
+    search_fields = ['module__title', 'module__course__title']
+    filter_horizontal = ['prerequisite_modules']
+    readonly_fields = ['created_at', 'updated_at']
+    
+    fieldsets = (
+        ('Informations de base', {
+            'fields': ('module', 'price', 'currency', 'is_available_individually')
+        }),
+        ('Prérequis', {
+            'fields': ('requires_previous_modules', 'prerequisite_modules'),
+            'classes': ('collapse',)
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+# Configuration de l'administration
+admin.site.site_header = "eSchool - Administration"
+admin.site.site_title = "eSchool Admin"
+admin.site.index_title = "Tableau de bord d'administration"

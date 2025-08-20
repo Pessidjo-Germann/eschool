@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facture {{ invoice.invoice_number }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .email-container {
+            background-color: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #3498db;
+        }
+        .logo {
+            font-size: 28px;
+            font-weight: bold;
+            color: #3498db;
+            margin-bottom: 10px;
+        }
+        .invoice-title {
+            font-size: 24px;
+            color: #2c3e50;
+            margin: 20px 0;
+        }
+        .invoice-info {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        .invoice-info h3 {
+            color: #3498db;
+            margin-top: 0;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding: 5px 0;
+        }
+        .info-label {
+            font-weight: bold;
+            color: #555;
+        }
+        .amount-highlight {
+            background-color: #27ae60;
+            color: white;
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .amount-highlight .amount {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .course-info {
+            background-color: #e3f2fd;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+            border-left: 4px solid #2196f3;
+        }
+        .button {
+            display: inline-block;
+            background-color: #3498db;
+            color: white;
+            padding: 12px 24px;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            margin: 10px 5px;
+            text-align: center;
+        }
+        .button:hover {
+            background-color: #2980b9;
+        }
+        .button.secondary {
+            background-color: #95a5a6;
+        }
+        .button.secondary:hover {
+            background-color: #7f8c8d;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            text-align: center;
+            color: #666;
+            font-size: 14px;
+        }
+        .social-links {
+            margin: 20px 0;
+        }
+        .social-links a {
+            color: #3498db;
+            text-decoration: none;
+            margin: 0 10px;
+        }
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            .email-container {
+                padding: 20px;
+            }
+            .info-row {
+                flex-direction: column;
+            }
+            .button {
+                display: block;
+                margin: 10px 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <!-- En-tête -->
+        <div class="header">
+            <div class="logo">📚 eSchool</div>
+            <p>Votre plateforme d'apprentissage en ligne</p>
+        </div>
+        
+        <!-- Titre de la facture -->
+        <h1 class="invoice-title">Facture {{ invoice.invoice_number }}</h1>
+        
+        <!-- Salutation -->
+        <p>Bonjour {{ user.get_full_name|default:user.username }},</p>
+        
+        <p>Merci pour votre achat ! Veuillez trouver ci-joint votre facture pour la transaction suivante :</p>
+        
+        <!-- Informations de la facture -->
+        <div class="invoice-info">
+            <h3>📋 Détails de la facture</h3>
+            <div class="info-row">
+                <span class="info-label">Numéro de facture :</span>
+                <span>{{ invoice.invoice_number }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Date d'émission :</span>
+                <span>{{ invoice.issue_date|date:"d/m/Y" }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Date d'échéance :</span>
+                <span>{{ invoice.due_date|date:"d/m/Y" }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Statut :</span>
+                <span>
+                    {% if invoice.status == 'paid' %}
+                        ✅ Payée
+                    {% elif invoice.status == 'sent' %}
+                        📧 Envoyée
+                    {% else %}
+                        {{ invoice.get_status_display }}
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+        
+        <!-- Informations sur le cours (si applicable) -->
+        {% if transaction.content_type.model == 'course' %}
+        <div class="course-info">
+            <h3>📖 Cours acheté</h3>
+            <p><strong>{{ transaction.description }}</strong></p>
+            <p>Félicitations ! Vous avez maintenant accès à vie à ce cours, y compris :</p>
+            <ul>
+                <li>✨ Contenu complet du cours</li>
+                <li>📱 Accès sur mobile et desktop</li>
+                <li>🎓 Certificat de fin de formation</li>
+                <li>🔄 Mises à jour gratuites</li>
+                <li>💬 Support communautaire</li>
+            </ul>
+        </div>
+        {% endif %}
+        
+        <!-- Montant total -->
+        <div class="amount-highlight">
+            <div>Montant total</div>
+            <div class="amount">{{ invoice.total_amount|floatformat:0 }} {{ invoice.currency }}</div>
+            {% if invoice.status == 'paid' %}
+            <div style="font-size: 14px; margin-top: 10px;">✅ Paiement reçu - Merci !</div>
+            {% endif %}
+        </div>
+        
+        <!-- Boutons d'action -->
+        <div style="text-align: center; margin: 30px 0;">
+            {% if transaction.content_type.model == 'course' %}
+            <a href="{{ request.build_absolute_uri }}/courses/{{ transaction.object_id }}/" class="button">
+                🚀 Accéder au cours
+            </a>
+            {% endif %}
+            
+            <a href="{{ request.build_absolute_uri }}/payments/transactions/" class="button secondary">
+                📊 Voir mes transactions
+            </a>
+        </div>
+        
+        <!-- Informations de facturation -->
+        <div class="invoice-info">
+            <h3>👤 Informations de facturation</h3>
+            <div class="info-row">
+                <span class="info-label">Nom :</span>
+                <span>{{ invoice.billing_name }}</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Email :</span>
+                <span>{{ invoice.billing_email }}</span>
+            </div>
+            {% if invoice.billing_phone %}
+            <div class="info-row">
+                <span class="info-label">Téléphone :</span>
+                <span>{{ invoice.billing_phone }}</span>
+            </div>
+            {% endif %}
+            {% if invoice.billing_address %}
+            <div class="info-row">
+                <span class="info-label">Adresse :</span>
+                <span>{{ invoice.billing_address }}</span>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Message personnalisé -->
+        <div style="background-color: #fff3cd; padding: 15px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #ffc107;">
+            <p><strong>💡 Conseil :</strong> Conservez cette facture pour vos dossiers. Elle vous sera utile pour toute demande de support ou de remboursement.</p>
+        </div>
+        
+        <!-- Pied de page -->
+        <div class="footer">
+            <p><strong>Besoin d'aide ?</strong></p>
+            <p>Notre équipe support est là pour vous aider :</p>
+            <div class="social-links">
+                <a href="mailto:support@eschool.com">📧 support@eschool.com</a>
+                <a href="tel:+237123456789">📞 +237 123 456 789</a>
+            </div>
+            
+            <hr style="margin: 20px 0; border: none; border-top: 1px solid #eee;">
+            
+            <p style="font-size: 12px; color: #999;">
+                Cet email a été envoyé automatiquement par eSchool Platform.<br>
+                Si vous avez reçu cet email par erreur, veuillez nous contacter.<br>
+                <br>
+                eSchool Platform - Douala, Cameroun<br>
+                © {{ current_year|default:"2024" }} eSchool. Tous droits réservés.
+            </p>
+        </div>
+    </div>
+</body>
+</html>

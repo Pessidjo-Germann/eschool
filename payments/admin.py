@@ -3,7 +3,7 @@ from django.utils.html import format_html
 from django.urls import reverse
 from django.utils.safestring import mark_safe
 from django.db.models import Count, Sum
-from .models import PaymentTransaction, WebhookEvent, PaymentRefund, PaymentConfiguration
+from .models import PaymentTransaction, WebhookEvent, PaymentRefund, PaymentConfiguration, Invoice
 import json
 
 
@@ -379,6 +379,129 @@ class PaymentConfigurationAdmin(admin.ModelAdmin):
             # Désactiver toutes les autres configurations
             PaymentConfiguration.objects.exclude(pk=obj.pk).update(is_active=False)
         super().save_model(request, obj, form, change)
+
+
+@admin.register(Invoice)
+class InvoiceAdmin(admin.ModelAdmin):
+    list_display = [
+        'invoice_number', 'billing_name', 'total_amount_display', 'status_display',
+        'issue_date', 'due_date', 'email_sent_display', 'is_overdue_display'
+    ]
+    list_filter = [
+        'status', 'email_sent', 'currency', 'issue_date', 'due_date'
+    ]
+    search_fields = [
+        'invoice_number', 'billing_name', 'billing_email', 'transaction__reference'
+    ]
+    readonly_fields = [
+        'id', 'invoice_number', 'created_at', 'updated_at', 
+        'email_sent_at', 'email_opened_at', 'days_until_due_display'
+    ]
+    fieldsets = (
+        ('Informations de base', {
+            'fields': ('id', 'invoice_number', 'transaction', 'user')
+        }),
+        ('Informations de facturation', {
+            'fields': ('billing_name', 'billing_email', 'billing_phone', 
+                      'billing_address', 'billing_city', 'billing_country')
+        }),
+        ('Détails financiers', {
+            'fields': ('subtotal', 'tax_rate', 'tax_amount', 'total_amount', 'currency')
+        }),
+        ('Statut et dates', {
+            'fields': ('status', 'issue_date', 'due_date', 'paid_date')
+        }),
+        ('Fichiers et communication', {
+            'fields': ('pdf_file', 'email_sent', 'email_sent_at', 'email_opened', 'email_opened_at')
+        }),
+        ('Métadonnées', {
+            'fields': ('notes', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    actions = ['generate_pdf', 'send_invoice_email', 'mark_as_paid']
+    
+    def total_amount_display(self, obj):
+        """Affichage formaté du montant total"""
+        return f"{obj.total_amount:,.0f} {obj.currency}"
+    total_amount_display.short_description = "Montant total"
+    
+    def status_display(self, obj):
+        """Affichage coloré du statut"""
+        colors = {
+            'draft': '#6c757d',
+            'sent': '#17a2b8',
+            'paid': '#28a745',
+            'cancelled': '#dc3545'
+        }
+        color = colors.get(obj.status, '#6c757d')
+        return format_html(
+            '<span style="color: {}; font-weight: bold;">{}</span>',
+            color,
+            obj.get_status_display()
+        )
+    status_display.short_description = "Statut"
+    
+    def email_sent_display(self, obj):
+        """Affichage du statut d'envoi email"""
+        if obj.email_sent:
+            icon = "✓" if obj.email_opened else "📧"
+            color = "#28a745" if obj.email_opened else "#17a2b8"
+            tooltip = "Ouvert" if obj.email_opened else "Envoyé"
+            return format_html(
+                '<span style="color: {};" title="{}">{}</span>',
+                color, tooltip, icon
+            )
+        return format_html('<span style="color: #6c757d;">✗</span>')
+    email_sent_display.short_description = "Email"
+    
+    def is_overdue_display(self, obj):
+        """Affichage du statut de retard"""
+        if obj.is_overdue:
+            return format_html(
+                '<span style="color: #dc3545; font-weight: bold;">En retard ({} jours)</span>',
+                abs(obj.days_until_due)
+            )
+        elif obj.status == 'paid':
+            return format_html('<span style="color: #28a745;">✓ Payée</span>')
+        else:
+            return format_html(
+                '<span style="color: #28a745;">{} jours restants</span>',
+                obj.days_until_due
+            )
+    is_overdue_display.short_description = "Échéance"
+    
+    def days_until_due_display(self, obj):
+        """Affichage des jours jusqu'à l'échéance"""
+        return f"{obj.days_until_due} jours"
+    days_until_due_display.short_description = "Jours jusqu'à l'échéance"
+    
+    def generate_pdf(self, request, queryset):
+        """Action pour générer les PDFs des factures"""
+        count = 0
+        for invoice in queryset:
+            # Cette fonction sera implémentée avec la génération PDF
+            count += 1
+        self.message_user(request, f"{count} facture(s) PDF générée(s).")
+    generate_pdf.short_description = "Générer les PDF"
+    
+    def send_invoice_email(self, request, queryset):
+        """Action pour envoyer les factures par email"""
+        count = 0
+        for invoice in queryset:
+            # Cette fonction sera implémentée avec l'envoi d'emails
+            count += 1
+        self.message_user(request, f"{count} facture(s) envoyée(s) par email.")
+    send_invoice_email.short_description = "Envoyer par email"
+    
+    def mark_as_paid(self, request, queryset):
+        """Action pour marquer les factures comme payées"""
+        updated = queryset.filter(status__in=['draft', 'sent']).count()
+        for invoice in queryset.filter(status__in=['draft', 'sent']):
+            invoice.mark_as_paid()
+        self.message_user(request, f"{updated} facture(s) marquée(s) comme payée(s).")
+    mark_as_paid.short_description = "Marquer comme payé"
 
 
 # Configuration personnalisée de l'admin

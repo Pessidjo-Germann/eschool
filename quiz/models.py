@@ -176,7 +176,8 @@ class Quiz(models.Model):
     def is_available_for_student(self, user):
         """Vérifie si un étudiant a accès à ce quiz"""
         # Vérifier que l'étudiant est inscrit au cours
-        if not user.enrolled_courses.filter(id=self.course.id).exists():
+        from courses.models import Enrollment
+        if not Enrollment.objects.filter(user=user, course=self.course).exists():
             return False
         
         # Vérifier que le quiz est publié et disponible

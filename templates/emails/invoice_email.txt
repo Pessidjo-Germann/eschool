@@ -1,0 +1,49 @@
+FACTURE {{ invoice.invoice_number }} - eSchool Platform
+
+Bonjour {{ user.get_full_name|default:user.username }},
+
+Merci pour votre achat ! Veuillez trouver ci-joint votre facture.
+
+=== DÉTAILS DE LA FACTURE ===
+Numéro de facture : {{ invoice.invoice_number }}
+Date d'émission : {{ invoice.issue_date|date:"d/m/Y" }}
+Date d'échéance : {{ invoice.due_date|date:"d/m/Y" }}
+Statut : {{ invoice.get_status_display }}
+
+{% if transaction.content_type.model == 'course' %}
+=== COURS ACHETÉ ===
+{{ transaction.description }}
+
+Félicitations ! Vous avez maintenant accès à vie à ce cours, y compris :
+- Contenu complet du cours
+- Accès sur mobile et desktop  
+- Certificat de fin de formation
+- Mises à jour gratuites
+- Support communautaire
+
+Accédez à votre cours : {{ request.build_absolute_uri }}/courses/{{ transaction.object_id }}/
+{% endif %}
+
+=== MONTANT TOTAL ===
+{{ invoice.total_amount|floatformat:0 }} {{ invoice.currency }}
+{% if invoice.status == 'paid' %}✓ Paiement reçu - Merci !{% endif %}
+
+=== INFORMATIONS DE FACTURATION ===
+Nom : {{ invoice.billing_name }}
+Email : {{ invoice.billing_email }}
+{% if invoice.billing_phone %}Téléphone : {{ invoice.billing_phone }}{% endif %}
+{% if invoice.billing_address %}Adresse : {{ invoice.billing_address }}{% endif %}
+
+=== LIENS UTILES ===
+Mes transactions : {{ request.build_absolute_uri }}/payments/transactions/
+Support : support@eschool.com
+Téléphone : +237 123 456 789
+
+CONSEIL : Conservez cette facture pour vos dossiers. Elle vous sera utile pour toute demande de support ou de remboursement.
+
+---
+eSchool Platform - Votre plateforme d'apprentissage en ligne
+Douala, Cameroun
+© {{ current_year|default:"2024" }} eSchool. Tous droits réservés.
+
+Cet email a été envoyé automatiquement. Si vous avez reçu cet email par erreur, veuillez nous contacter.
