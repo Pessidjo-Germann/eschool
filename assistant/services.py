@@ -1,7 +1,7 @@
 """
 Services pour l'assistant virtuel avec intégration Gemini API
 """
-from google import genai
+import google.generativeai as genai
 import json
 import logging
 import os
@@ -54,12 +54,11 @@ class GeminiService:
         self.config = config
         self.api_key = "AIzaSyDfcxNav04S4SWpnYP3wXcWOeIDdCrg16Q"
         
-        # Configurer la variable d'environnement pour le client
-        os.environ['GEMINI_API_KEY'] = self.api_key
+        # Configurer la clé API pour genai
+        genai.configure(api_key=self.api_key)
         
-        # Initialiser le client Gemini
-        self.client = genai.Client(
-            api_key="AIzaSyDfcxNav04S4SWpnYP3wXcWOeIDdCrg16Q")
+        # Initialiser le modèle
+        self.model = genai.GenerativeModel(self.config.model)
     
     
     def generate_content(
@@ -90,11 +89,8 @@ class GeminiService:
             if system_prompt:
                 current_message = f"INSTRUCTIONS: {system_prompt}\n\n{current_message}"
             
-            # Générer la réponse avec la nouvelle API client
-            response = self.client.models.generate_content(
-                model=self.config.model,
-                contents=current_message
-            )
+            # Générer la réponse avec l'API google-generativeai
+            response = self.model.generate_content(current_message)
             
             # Extraire le texte de la réponse
             response_text = response.text
