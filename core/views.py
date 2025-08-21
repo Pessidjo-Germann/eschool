@@ -108,6 +108,10 @@ class LogoutView(DjangoLogoutView):
     def dispatch(self, request, *args, **kwargs):
         messages.success(request, 'Vous avez été déconnecté avec succès.')
         return super().dispatch(request, *args, **kwargs)
+    
+    def get(self, request, *args, **kwargs):
+        """Autoriser GET pour logout via URL directe"""
+        return self.post(request, *args, **kwargs)
 
 
 class CustomPasswordResetView(PasswordResetView):

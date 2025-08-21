@@ -45,7 +45,7 @@ class GeminiService:
             class TempConfig:
                 def __init__(self, api_key, model_name):
                     self.api_key = api_key
-                    self.model = model_name  # Utiliser 'model' comme dans le modèle Django
+                    self.model = model_name  
                     self.max_tokens = 2048
                     self.temperature = 0.7
                     

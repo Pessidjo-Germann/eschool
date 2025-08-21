@@ -1,0 +1,203 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Instructeur - eSchool{% endblock %}
+
+{% block extra_css %}
+<style>
+:root {
+    --instructor-primary: #28a745;
+    --instructor-secondary: #20c997;
+    --instructor-accent: #17a2b8;
+}
+
+.instructor-header {
+    background: linear-gradient(135deg, var(--instructor-primary), var(--instructor-secondary));
+    color: white;
+    padding: 2rem 0;
+    margin-bottom: 2rem;
+}
+
+.instructor-nav {
+    background: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    padding: 1rem 0;
+    margin-bottom: 2rem;
+}
+
+.instructor-nav .nav-link {
+    color: #495057;
+    font-weight: 500;
+    margin-right: 1rem;
+    padding: 0.5rem 1rem;
+    border-radius: 5px;
+    transition: all 0.3s;
+}
+
+.instructor-nav .nav-link:hover,
+.instructor-nav .nav-link.active {
+    background: var(--instructor-primary);
+    color: white;
+}
+
+.instructor-card {
+    border: none;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    border-radius: 10px;
+    transition: transform 0.3s;
+}
+
+.instructor-card:hover {
+    transform: translateY(-5px);
+}
+
+.instructor-btn {
+    background: var(--instructor-primary);
+    border: none;
+    color: white;
+    padding: 0.5rem 1.5rem;
+    border-radius: 5px;
+    font-weight: 500;
+    transition: all 0.3s;
+}
+
+.instructor-btn:hover {
+    background: var(--instructor-secondary);
+    color: white;
+    transform: translateY(-2px);
+}
+
+.instructor-sidebar {
+    background: #f8f9fa;
+    min-height: calc(100vh - 200px);
+    border-radius: 10px;
+    padding: 1.5rem;
+}
+
+.instructor-content {
+    padding: 1.5rem;
+}
+
+@media (max-width: 768px) {
+    .instructor-header {
+        padding: 1rem 0;
+    }
+    
+    .instructor-nav .nav-link {
+        margin-right: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="instructor-layout">
+    <!-- En-tête Instructeur -->
+    <div class="instructor-header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1><i class="bi bi-mortarboard me-3"></i>{% block page_title %}Espace Instructeur{% endblock %}</h1>
+                    <p class="mb-0">{% block page_description %}Gérez vos cours, quiz et étudiants{% endblock %}</p>
+                </div>
+                <div class="col-md-4 text-md-end">
+                    <div class="d-flex justify-content-md-end gap-2">
+                        <a href="{% url 'instructor:course_create' %}" class="btn instructor-btn">
+                            <i class="bi bi-plus-circle me-2"></i>Nouveau cours
+                        </a>
+                        <a href="{% url 'quiz:quiz_create' %}" class="btn instructor-btn">
+                            <i class="bi bi-clipboard-plus me-2"></i>Nouveau quiz
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation Instructeur -->
+    <div class="instructor-nav">
+        <div class="container">
+            <ul class="nav nav-pills">
+                <li class="nav-item">
+                    <a class="nav-link {% if 'courses' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'instructor:courses' %}">
+                        <i class="bi bi-book me-2"></i>Mes cours
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if 'quiz' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'quiz:quiz_list' %}">
+                        <i class="bi bi-clipboard-check me-2"></i>Mes quiz
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'instructor:course_create' %}">
+                        <i class="bi bi-plus-circle me-2"></i>Nouveau cours
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'quiz:quiz_create' %}">
+                        <i class="bi bi-clipboard-plus me-2"></i>Nouveau quiz
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Contenu Principal -->
+    <div class="container">
+        <div class="row">
+            <!-- Sidebar (optionnel) -->
+            {% block sidebar %}
+            {% endblock %}
+
+            <!-- Contenu -->
+            <div class="col-md-{% if block.sidebar %}9{% else %}12{% endif %}">
+                <div class="instructor-content">
+                    {% if messages %}
+                        {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    {% block instructor_content %}
+                    <!-- Le contenu spécifique de chaque page va ici -->
+                    {% endblock %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// JavaScript spécifique aux instructeurs
+document.addEventListener('DOMContentLoaded', function() {
+    // Animation pour les cartes
+    const cards = document.querySelectorAll('.instructor-card');
+    cards.forEach(card => {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-5px)';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+        });
+    });
+
+    // Confirmation pour les actions de suppression
+    const deleteButtons = document.querySelectorAll('[data-confirm-delete]');
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            const itemName = this.dataset.itemName || 'cet élément';
+            if (!confirm(`Êtes-vous sûr de vouloir supprimer ${itemName} ?`)) {
+                e.preventDefault();
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
