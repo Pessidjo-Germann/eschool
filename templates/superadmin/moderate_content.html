@@ -1,0 +1,349 @@
+{% extends 'superadmin/base.html' %}
+
+{% block page_title %}Modérer {{ content_type|title }}{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'superadmin:content_moderation' %}" class="btn btn-outline-secondary">
+    <i class="fas fa-arrow-left me-2"></i>Retour à la liste
+</a>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Contenu à modérer -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-{% if content_type == 'course' %}book{% else %}question-circle{% endif %} me-2"></i>
+                    Détails du {{ content_type|title }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <!-- Titre et informations générales -->
+                <div class="mb-4">
+                    <h4>{{ content.title }}</h4>
+                    <div class="d-flex align-items-center text-muted mb-3">
+                        <div class="avatar-circle me-3">
+                            {% if content.instructor.profile_picture %}
+                                <img src="{{ content.instructor.profile_picture.url }}" 
+                                     alt="{{ content.instructor.username }}" 
+                                     class="rounded-circle" width="40" height="40">
+                            {% else %}
+                                <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center" 
+                                     style="width: 40px; height: 40px;">
+                                    <span class="text-white fw-bold">
+                                        {{ content.instructor.first_name|first|default:content.instructor.username|first|upper }}
+                                    </span>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <strong>{{ content.instructor.first_name|default:content.instructor.username }}</strong><br>
+                            <small>Créé le {{ content.created_at|date:"d/m/Y à H:i" }}</small>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        <span class="badge bg-primary">{{ content.category.name|default:"Sans catégorie" }}</span>
+                        <span class="badge bg-info">{{ content.level|default:"Débutant" }}</span>
+                        {% if content.price %}
+                            <span class="badge bg-success">{{ content.price }}€</span>
+                        {% else %}
+                            <span class="badge bg-warning">Gratuit</span>
+                        {% endif %}
+                        {% if content.duration %}
+                            <span class="badge bg-secondary">{{ content.duration }} min</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Description -->
+                <div class="mb-4">
+                    <h6>Description</h6>
+                    <div class="p-3 bg-light rounded">
+                        {{ content.description|linebreaks }}
+                    </div>
+                </div>
+
+                <!-- Contenu détaillé -->
+                {% if content.detailed_description %}
+                    <div class="mb-4">
+                        <h6>Description détaillée</h6>
+                        <div class="p-3 bg-light rounded">
+                            {{ content.detailed_description|linebreaks }}
+                        </div>
+                    </div>
+                {% endif %}
+
+                <!-- Objectifs -->
+                {% if content.objectives %}
+                    <div class="mb-4">
+                        <h6>Objectifs d'apprentissage</h6>
+                        <div class="p-3 bg-light rounded">
+                            {{ content.objectives|linebreaks }}
+                        </div>
+                    </div>
+                {% endif %}
+
+                <!-- Prérequis -->
+                {% if content.prerequisites %}
+                    <div class="mb-4">
+                        <h6>Prérequis</h6>
+                        <div class="p-3 bg-light rounded">
+                            {{ content.prerequisites|linebreaks }}
+                        </div>
+                    </div>
+                {% endif %}
+
+                <!-- Image de couverture -->
+                {% if content.cover_image %}
+                    <div class="mb-4">
+                        <h6>Image de couverture</h6>
+                        <img src="{{ content.cover_image.url }}" alt="{{ content.title }}" 
+                             class="img-fluid rounded" style="max-height: 300px;">
+                    </div>
+                {% endif %}
+
+                <!-- Métadonnées -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Informations techniques</h6>
+                        <ul class="list-unstyled">
+                            <li><strong>ID:</strong> {{ content.id }}</li>
+                            <li><strong>Slug:</strong> {{ content.slug }}</li>
+                            <li><strong>Statut:</strong> 
+                                <span class="badge bg-{% if content.is_published %}success{% else %}warning{% endif %}">
+                                    {% if content.is_published %}Publié{% else %}Brouillon{% endif %}
+                                </span>
+                            </li>
+                            <li><strong>Créé:</strong> {{ content.created_at|date:"d/m/Y H:i" }}</li>
+                            <li><strong>Modifié:</strong> {{ content.updated_at|date:"d/m/Y H:i" }}</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h6>Statistiques</h6>
+                        <ul class="list-unstyled">
+                            <li><strong>Vues:</strong> {{ content.view_count|default:0 }}</li>
+                            <li><strong>Inscriptions:</strong> {{ content.enrollment_count|default:0 }}</li>
+                            {% if content.rating %}
+                                <li><strong>Note:</strong> {{ content.rating }}/5</li>
+                            {% endif %}
+                            {% if content.lessons_count %}
+                                <li><strong>Leçons:</strong> {{ content.lessons_count }}</li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <!-- Actions de modération -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-gavel me-2"></i>
+                    Actions de Modération
+                </h6>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="reason" class="form-label">Raison de la décision *</label>
+                        <textarea class="form-control" id="reason" name="reason" rows="4" 
+                                  placeholder="Expliquez votre décision..." required></textarea>
+                        <div class="form-text">Cette raison sera visible par l'auteur du contenu.</div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" name="action" value="approve" class="btn btn-success">
+                            <i class="fas fa-check me-2"></i>Approuver le contenu
+                        </button>
+                        
+                        <button type="submit" name="action" value="reject" class="btn btn-danger"
+                                onclick="return confirm('Êtes-vous sûr de vouloir rejeter ce contenu ?')">
+                            <i class="fas fa-times me-2"></i>Rejeter le contenu
+                        </button>
+                        
+                        <button type="button" class="btn btn-warning" onclick="requestChanges()">
+                            <i class="fas fa-edit me-2"></i>Demander des modifications
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Historique de modération -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-history me-2"></i>
+                    Historique de Modération
+                </h6>
+            </div>
+            <div class="card-body">
+                {% comment %}
+                <!-- Ici on afficherait l'historique des actions de modération -->
+                <div class="timeline">
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-primary"></div>
+                        <div class="timeline-content">
+                            <h6 class="mb-1">Soumis pour modération</h6>
+                            <p class="text-muted small mb-0">{{ content.created_at|date:"d/m/Y H:i" }}</p>
+                        </div>
+                    </div>
+                </div>
+                {% endcomment %}
+                
+                <div class="text-muted text-center">
+                    <i class="fas fa-clock fa-2x mb-2"></i>
+                    <p>Premier examen</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Informations de l'auteur -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-user me-2"></i>
+                    Informations Auteur
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="avatar-circle me-3">
+                        {% if content.instructor.profile_picture %}
+                            <img src="{{ content.instructor.profile_picture.url }}" 
+                                 alt="{{ content.instructor.username }}" 
+                                 class="rounded-circle" width="50" height="50">
+                        {% else %}
+                            <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center" 
+                                 style="width: 50px; height: 50px;">
+                                <span class="text-white fw-bold">
+                                    {{ content.instructor.first_name|first|default:content.instructor.username|first|upper }}
+                                </span>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <h6 class="mb-0">{{ content.instructor.first_name|default:content.instructor.username }}</h6>
+                        <small class="text-muted">@{{ content.instructor.username }}</small>
+                    </div>
+                </div>
+                
+                <div class="small">
+                    <div class="mb-1"><strong>Email:</strong> {{ content.instructor.email }}</div>
+                    <div class="mb-1"><strong>Inscrit:</strong> {{ content.instructor.date_joined|date:"d/m/Y" }}</div>
+                    <div class="mb-1"><strong>Cours créés:</strong> {{ content.instructor.courses.count }}</div>
+                    <div class="mb-1"><strong>Statut:</strong> 
+                        <span class="badge bg-{% if content.instructor.is_active %}success{% else %}danger{% endif %}">
+                            {% if content.instructor.is_active %}Actif{% else %}Inactif{% endif %}
+                        </span>
+                    </div>
+                </div>
+
+                <div class="mt-3">
+                    <a href="{% url 'superadmin:user_detail' content.instructor.id %}" 
+                       class="btn btn-outline-primary btn-sm w-100">
+                        <i class="fas fa-eye me-2"></i>Voir le profil complet
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.timeline {
+    position: relative;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 15px;
+    height: 100%;
+    width: 2px;
+    background: #e9ecef;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 2rem;
+    padding-left: 3rem;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 3px solid #fff;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.timeline-content {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px;
+    border-left: 3px solid #667eea;
+}
+
+.avatar-circle img {
+    object-fit: cover;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function requestChanges() {
+    const reason = document.getElementById('reason').value;
+    if (!reason.trim()) {
+        alert('Veuillez indiquer une raison avant de demander des modifications.');
+        document.getElementById('reason').focus();
+        return;
+    }
+    
+    if (confirm('Êtes-vous sûr de vouloir demander des modifications ? L\'auteur sera notifié.')) {
+        // Créer un formulaire pour soumettre la demande de modification
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.innerHTML = `
+            <input type="hidden" name="csrfmiddlewaretoken" value="${document.querySelector('[name=csrfmiddlewaretoken]').value}">
+            <input type="hidden" name="action" value="request_changes">
+            <input type="hidden" name="reason" value="${reason}">
+        `;
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+// Auto-resize du textarea
+document.getElementById('reason').addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = this.scrollHeight + 'px';
+});
+
+// Validation du formulaire
+document.querySelector('form').addEventListener('submit', function(e) {
+    const reason = document.getElementById('reason').value;
+    if (!reason.trim()) {
+        e.preventDefault();
+        alert('Veuillez indiquer une raison pour votre décision.');
+        document.getElementById('reason').focus();
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,306 @@
+{% extends 'superadmin/base.html' %}
+
+{% block page_title %}Dashboard Super Admin{% endblock %}
+
+{% block content %}
+<!-- Vue d'ensemble des statistiques -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-uppercase mb-1">Utilisateurs Total</div>
+                        <div class="h5 mb-0">{{ stats.total_users }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-users fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-uppercase mb-1">Nouveaux Aujourd'hui</div>
+                        <div class="h5 mb-0">{{ stats.new_users_today }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-user-plus fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-uppercase mb-1">Cours Publiés</div>
+                        <div class="h5 mb-0">{{ stats.published_courses }}/{{ stats.total_courses }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-book fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stat-card">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-uppercase mb-1">Revenus Total</div>
+                        <div class="h5 mb-0">{{ stats.total_revenue|floatformat:2 }}€</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-euro-sign fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Graphiques et analyses -->
+<div class="row mb-4">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-line me-2"></i>
+                    Évolution des Inscriptions et Revenus
+                </h5>
+                <div class="btn-group btn-group-sm">
+                    <button type="button" class="btn btn-outline-primary" onclick="updateChart('7d')">7j</button>
+                    <button type="button" class="btn btn-primary" onclick="updateChart('30d')">30j</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <canvas id="statisticsChart" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Actions Requises
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span>Modération en attente</span>
+                    <span class="badge bg-warning">{{ stats.pending_moderation }}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span>Litiges ouverts</span>
+                    <span class="badge bg-danger">{{ stats.open_disputes }}</span>
+                </div>
+                <a href="{% url 'superadmin:content_moderation' %}" class="btn btn-primary btn-sm w-100">
+                    Voir les tâches
+                </a>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-clock me-2"></i>
+                    Accès Rapide
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'superadmin:user_management' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-users me-2"></i>
+                        Gérer Utilisateurs
+                    </a>
+                    <a href="{% url 'superadmin:platform_statistics' %}" class="btn btn-outline-success">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        Voir Statistiques
+                    </a>
+                    <a href="{% url 'superadmin:system_configuration' %}" class="btn btn-outline-info">
+                        <i class="fas fa-cog me-2"></i>
+                        Configuration
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Activités récentes et litiges -->
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-history me-2"></i>
+                    Activités Récentes
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if recent_activities %}
+                    {% for activity in recent_activities %}
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="flex-shrink-0">
+                                <div class="avatar-sm bg-primary rounded-circle d-flex align-items-center justify-content-center">
+                                    <i class="fas fa-user text-white"></i>
+                                </div>
+                            </div>
+                            <div class="flex-grow-1 ms-3">
+                                <h6 class="mb-0">{{ activity.admin.username }}</h6>
+                                <p class="mb-0 text-muted small">{{ activity.description }}</p>
+                                <small class="text-muted">{{ activity.created_at|timesince }} ago</small>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted text-center">Aucune activité récente</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Litiges Récents
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if recent_disputes %}
+                    {% for dispute in recent_disputes %}
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <h6 class="mb-0">Litige #{{ dispute.id }}</h6>
+                                <p class="mb-0 text-muted small">{{ dispute.user.username }} - {{ dispute.amount }}€</p>
+                                <small class="text-muted">{{ dispute.created_at|timesince }} ago</small>
+                            </div>
+                            <span class="badge bg-{% if dispute.status == 'open' %}danger{% elif dispute.status == 'investigating' %}warning{% else %}success{% endif %}">
+                                {{ dispute.get_status_display }}
+                            </span>
+                        </div>
+                    {% endfor %}
+                    <div class="text-center mt-3">
+                        <a href="{% url 'superadmin:payment_disputes' %}" class="btn btn-outline-primary btn-sm">
+                            Voir tous les litiges
+                        </a>
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center">Aucun litige récent</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let statisticsChart;
+
+// Initialiser le graphique
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('statisticsChart').getContext('2d');
+    
+    statisticsChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Nouveaux Utilisateurs',
+                data: [],
+                borderColor: '#667eea',
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                tension: 0.4,
+                yAxisID: 'y'
+            }, {
+                label: 'Revenus Quotidiens (€)',
+                data: [],
+                borderColor: '#764ba2',
+                backgroundColor: 'rgba(118, 75, 162, 0.1)',
+                tension: 0.4,
+                yAxisID: 'y1'
+            }]
+        },
+        options: {
+            responsive: true,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            scales: {
+                x: {
+                    display: true,
+                },
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: 'Utilisateurs'
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: 'Revenus (€)'
+                    },
+                    grid: {
+                        drawOnChartArea: false,
+                    },
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'top',
+                }
+            }
+        }
+    });
+
+    // Charger les données initiales
+    updateChart('30d');
+});
+
+function updateChart(period) {
+    fetch(`{% url 'superadmin:api_statistics' %}?period=${period}`)
+        .then(response => response.json())
+        .then(data => {
+            statisticsChart.data.labels = data.dates;
+            statisticsChart.data.datasets[0].data = data.new_users;
+            statisticsChart.data.datasets[1].data = data.daily_revenue;
+            statisticsChart.update();
+            
+            // Mettre à jour les boutons actifs
+            document.querySelectorAll('.btn-group button').forEach(btn => {
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-outline-primary');
+            });
+            event.target.classList.remove('btn-outline-primary');
+            event.target.classList.add('btn-primary');
+        })
+        .catch(error => {
+            console.error('Erreur lors du chargement des données:', error);
+        });
+}
+</script>
+{% endblock %}

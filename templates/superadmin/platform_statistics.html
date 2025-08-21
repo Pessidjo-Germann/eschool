@@ -1,0 +1,476 @@
+{% extends 'superadmin/base.html' %}
+
+{% block page_title %}Statistiques de la Plateforme{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <button type="button" class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown">
+        <i class="fas fa-calendar me-2"></i>Période
+    </button>
+    <ul class="dropdown-menu">
+        <li><a class="dropdown-item" href="?period=7d">7 derniers jours</a></li>
+        <li><a class="dropdown-item" href="?period=30d">30 derniers jours</a></li>
+        <li><a class="dropdown-item" href="?period=90d">90 derniers jours</a></li>
+    </ul>
+</div>
+<button type="button" class="btn btn-success" onclick="exportData()">
+    <i class="fas fa-download me-2"></i>Exporter
+</button>
+{% endblock %}
+
+{% block content %}
+<!-- Vue d'ensemble -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card gradient-card-blue">
+            <div class="card-body text-white">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <div class="h4 mb-0">{{ user_stats.total }}</div>
+                        <div class="text-white-50">Utilisateurs Total</div>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-users fa-2x"></i>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <small class="text-white-50">+{{ user_stats.new }} nouveaux</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card gradient-card-green">
+            <div class="card-body text-white">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <div class="h4 mb-0">{{ course_stats.total }}</div>
+                        <div class="text-white-50">Cours Total</div>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-book fa-2x"></i>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <small class="text-white-50">{{ course_stats.published }} publiés</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card gradient-card-orange">
+            <div class="card-body text-white">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <div class="h4 mb-0">{{ financial_stats.total_revenue|floatformat:0 }}€</div>
+                        <div class="text-white-50">Revenus Total</div>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-euro-sign fa-2x"></i>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <small class="text-white-50">+{{ financial_stats.period_revenue|floatformat:0 }}€ période</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card gradient-card-purple">
+            <div class="card-body text-white">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <div class="h4 mb-0">{{ financial_stats.success_rate|floatformat:1 }}%</div>
+                        <div class="text-white-50">Taux de Réussite</div>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-chart-line fa-2x"></i>
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <small class="text-white-50">{{ financial_stats.total_transactions }} transactions</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Graphiques principaux -->
+<div class="row mb-4">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-area me-2"></i>
+                    Évolution des Utilisateurs et Revenus
+                </h5>
+                <div class="btn-group btn-group-sm">
+                    <button type="button" class="btn btn-outline-primary" onclick="updateMainChart('7d')">7j</button>
+                    <button type="button" class="btn btn-primary" onclick="updateMainChart('30d')">30j</button>
+                    <button type="button" class="btn btn-outline-primary" onclick="updateMainChart('90d')">90j</button>
+                </div>
+            </div>
+            <div class="card-body">
+                <canvas id="mainChart" height="100"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-pie-chart me-2"></i>
+                    Répartition des Rôles
+                </h5>
+            </div>
+            <div class="card-body">
+                <canvas id="roleChart" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tableaux de données détaillées -->
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-users me-2"></i>
+                    Statistiques Utilisateurs
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <tbody>
+                            <tr>
+                                <td><strong>Total d'utilisateurs</strong></td>
+                                <td class="text-end">{{ user_stats.total }}</td>
+                            </tr>
+                            <tr>
+                                <td>Nouveaux (période)</td>
+                                <td class="text-end">{{ user_stats.new }}</td>
+                            </tr>
+                            <tr>
+                                <td>Actifs (période)</td>
+                                <td class="text-end">{{ user_stats.active }}</td>
+                            </tr>
+                            {% for role in user_stats.by_role %}
+                                <tr>
+                                    <td>
+                                        {% if role.role == 'instructor' %}
+                                            <span class="badge bg-success me-2">Formateurs</span>
+                                        {% elif role.role == 'student' %}
+                                            <span class="badge bg-primary me-2">Étudiants</span>
+                                        {% else %}
+                                            <span class="badge bg-warning me-2">Autres</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end">{{ role.count }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-euro-sign me-2"></i>
+                    Statistiques Financières
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <tbody>
+                            <tr>
+                                <td><strong>Revenus totaux</strong></td>
+                                <td class="text-end">{{ financial_stats.total_revenue|floatformat:2 }}€</td>
+                            </tr>
+                            <tr>
+                                <td>Revenus (période)</td>
+                                <td class="text-end">{{ financial_stats.period_revenue|floatformat:2 }}€</td>
+                            </tr>
+                            <tr>
+                                <td>Transactions réussies</td>
+                                <td class="text-end">{{ financial_stats.total_transactions }}</td>
+                            </tr>
+                            <tr>
+                                <td>Taux de réussite</td>
+                                <td class="text-end">{{ financial_stats.success_rate|floatformat:1 }}%</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Revenu moyen/transaction</strong></td>
+                                <td class="text-end">
+                                    {% if financial_stats.total_transactions > 0 %}
+                                        {{ financial_stats.total_revenue|div:financial_stats.total_transactions|floatformat:2 }}€
+                                    {% else %}
+                                        0€
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cours les plus populaires -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-star me-2"></i>
+                    Cours les Plus Populaires
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="text-muted text-center py-4">
+                    <i class="fas fa-chart-bar fa-3x mb-3"></i>
+                    <p>Fonctionnalité en cours de développement</p>
+                    <small>Les statistiques détaillées des cours seront disponibles prochainement</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.gradient-card-blue {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+}
+
+.gradient-card-green {
+    background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+    border: none;
+}
+
+.gradient-card-orange {
+    background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+    border: none;
+}
+
+.gradient-card-purple {
+    background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+    border: none;
+}
+
+.card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 25px rgba(0,0,0,0.1);
+}
+
+.table td {
+    border: none;
+    padding: 0.5rem 0.75rem;
+}
+
+.table tbody tr:nth-child(odd) {
+    background-color: rgba(0,0,0,.02);
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let mainChart, roleChart;
+
+// Initialisation des graphiques
+document.addEventListener('DOMContentLoaded', function() {
+    initializeCharts();
+    updateMainChart('{{ period }}');
+    updateRoleChart();
+});
+
+function initializeCharts() {
+    // Graphique principal
+    const mainCtx = document.getElementById('mainChart').getContext('2d');
+    mainChart = new Chart(mainCtx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Nouveaux Utilisateurs',
+                data: [],
+                borderColor: '#667eea',
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                tension: 0.4,
+                yAxisID: 'y'
+            }, {
+                label: 'Revenus Quotidiens (€)',
+                data: [],
+                borderColor: '#f39c12',
+                backgroundColor: 'rgba(243, 156, 18, 0.1)',
+                tension: 0.4,
+                yAxisID: 'y1'
+            }]
+        },
+        options: {
+            responsive: true,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            scales: {
+                x: {
+                    display: true,
+                    title: {
+                        display: true,
+                        text: 'Date'
+                    }
+                },
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: {
+                        display: true,
+                        text: 'Utilisateurs'
+                    }
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    title: {
+                        display: true,
+                        text: 'Revenus (€)'
+                    },
+                    grid: {
+                        drawOnChartArea: false,
+                    },
+                }
+            },
+            plugins: {
+                legend: {
+                    position: 'top',
+                }
+            }
+        }
+    });
+
+    // Graphique des rôles
+    const roleCtx = document.getElementById('roleChart').getContext('2d');
+    roleChart = new Chart(roleCtx, {
+        type: 'doughnut',
+        data: {
+            labels: [],
+            datasets: [{
+                data: [],
+                backgroundColor: [
+                    '#667eea',
+                    '#2ecc71',
+                    '#f39c12',
+                    '#e74c3c',
+                    '#9b59b6'
+                ],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                }
+            }
+        }
+    });
+}
+
+function updateMainChart(period) {
+    fetch(`{% url 'superadmin:api_statistics' %}?period=${period}`)
+        .then(response => response.json())
+        .then(data => {
+            mainChart.data.labels = data.dates;
+            mainChart.data.datasets[0].data = data.new_users;
+            mainChart.data.datasets[1].data = data.daily_revenue;
+            mainChart.update();
+            
+            // Mettre à jour les boutons actifs
+            document.querySelectorAll('.btn-group button').forEach(btn => {
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-outline-primary');
+            });
+            event.target.classList.remove('btn-outline-primary');
+            event.target.classList.add('btn-primary');
+        })
+        .catch(error => {
+            console.error('Erreur lors du chargement des données:', error);
+        });
+}
+
+function updateRoleChart() {
+    const roleData = [
+        {% for role in user_stats.by_role %}
+            {
+                label: '{% if role.role == "instructor" %}Formateurs{% elif role.role == "student" %}Étudiants{% else %}Autres{% endif %}',
+                count: {{ role.count }}
+            }{% if not forloop.last %},{% endif %}
+        {% endfor %}
+    ];
+    
+    roleChart.data.labels = roleData.map(item => item.label);
+    roleChart.data.datasets[0].data = roleData.map(item => item.count);
+    roleChart.update();
+}
+
+function exportData() {
+    const period = '{{ period }}';
+    
+    const exportData = {
+        period: period,
+        generated_at: new Date().toISOString(),
+        user_stats: {{ user_stats|safe }},
+        course_stats: {{ course_stats|safe }},
+        financial_stats: {
+            total_revenue: {{ financial_stats.total_revenue }},
+            period_revenue: {{ financial_stats.period_revenue }},
+            total_transactions: {{ financial_stats.total_transactions }},
+            success_rate: {{ financial_stats.success_rate }}
+        }
+    };
+    
+    // Créer et télécharger le fichier JSON
+    const dataStr = JSON.stringify(exportData, null, 2);
+    const dataBlob = new Blob([dataStr], {type: 'application/json'});
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `statistics-${period}-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
+
+// Gestion des filtres de période
+document.querySelectorAll('.dropdown-menu a').forEach(link => {
+    link.addEventListener('click', function(e) {
+        e.preventDefault();
+        const period = new URL(this.href).searchParams.get('period');
+        window.location.href = `?period=${period}`;
+    });
+});
+</script>
+{% endblock %}

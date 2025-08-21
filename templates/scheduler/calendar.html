@@ -1,0 +1,968 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Calendrier - eSchool{% endblock %}
+
+{% block extra_css %}
+<!-- FullCalendar CSS -->
+<link href="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.8/main.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid@6.1.8/main.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@fullcalendar/timegrid@6.1.8/main.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/@fullcalendar/list@6.1.8/main.min.css" rel="stylesheet">
+
+<style>
+    .calendar-container {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 4px 25px rgba(0, 0, 0, 0.1);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .calendar-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px 15px 0 0;
+        padding: 1.5rem;
+        margin: -1.5rem -1.5rem 1.5rem -1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+
+    .calendar-title {
+        font-size: 1.8rem;
+        font-weight: 600;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .calendar-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .btn-calendar {
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        text-decoration: none;
+        font-size: 0.875rem;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .btn-calendar:hover {
+        background: rgba(255, 255, 255, 0.3);
+        color: white;
+        text-decoration: none;
+        transform: translateY(-1px);
+    }
+
+    .btn-calendar.active {
+        background: rgba(255, 255, 255, 0.9);
+        color: #667eea;
+        border-color: rgba(255, 255, 255, 0.9);
+    }
+
+    /* Customisation FullCalendar */
+    .fc {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    .fc-toolbar-title {
+        font-size: 1.5rem !important;
+        font-weight: 600 !important;
+        color: #2c3e50;
+    }
+
+    .fc-button-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        border: none !important;
+        border-radius: 8px !important;
+        font-weight: 500 !important;
+        transition: all 0.3s ease !important;
+    }
+
+    .fc-button-primary:hover {
+        transform: translateY(-1px) !important;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3) !important;
+    }
+
+    .fc-event {
+        border-radius: 6px !important;
+        border: none !important;
+        font-size: 0.85rem !important;
+        font-weight: 500 !important;
+        padding: 2px 6px !important;
+        margin: 1px 0 !important;
+        cursor: pointer !important;
+        transition: all 0.2s ease !important;
+    }
+
+    .fc-event:hover {
+        transform: translateY(-1px) !important;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2) !important;
+    }
+
+    .fc-daygrid-event {
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+
+    .fc-day-today {
+        background: rgba(102, 126, 234, 0.1) !important;
+    }
+
+    .fc-day:hover {
+        background: rgba(102, 126, 234, 0.05) !important;
+    }
+
+    /* Sidebar d'événements à venir */
+    .upcoming-events {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 4px 25px rgba(0, 0, 0, 0.1);
+        padding: 1.5rem;
+        height: fit-content;
+        position: sticky;
+        top: 2rem;
+    }
+
+    .upcoming-title {
+        color: #2c3e50;
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .event-item {
+        padding: 1rem;
+        border-left: 4px solid #667eea;
+        background: #f8f9fa;
+        border-radius: 0 8px 8px 0;
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+
+    .event-item:hover {
+        transform: translateX(5px);
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .event-item.priority-high {
+        border-left-color: #e74c3c;
+    }
+
+    .event-item.priority-urgent {
+        border-left-color: #c0392b;
+        background: #fdf2f2;
+    }
+
+    .event-time {
+        color: #667eea;
+        font-weight: 600;
+        font-size: 0.875rem;
+    }
+
+    .event-title {
+        color: #2c3e50;
+        font-weight: 500;
+        margin: 0.25rem 0;
+    }
+
+    .event-type {
+        background: #667eea;
+        color: white;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        display: inline-block;
+        margin-top: 0.5rem;
+    }
+
+    .event-type.course {
+        background: #28a745;
+    }
+
+    .event-type.deadline {
+        background: #dc3545;
+    }
+
+    .event-type.exam {
+        background: #fd7e14;
+    }
+
+    .legend {
+        margin-top: 2rem;
+        padding: 1rem;
+        background: #f8f9fa;
+        border-radius: 8px;
+    }
+
+    .legend-title {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: #2c3e50;
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    .legend-color {
+        width: 16px;
+        height: 16px;
+        border-radius: 4px;
+        display: inline-block;
+    }
+
+    /* Mobile responsive */
+    @media (max-width: 768px) {
+        .calendar-header {
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .calendar-title {
+            font-size: 1.5rem;
+        }
+
+        .calendar-actions {
+            justify-content: center;
+        }
+
+        .fc-toolbar {
+            flex-direction: column !important;
+            gap: 0.5rem !important;
+        }
+
+        .fc-toolbar-chunk {
+            display: flex !important;
+            justify-content: center !important;
+        }
+
+        .upcoming-events {
+            margin-top: 2rem;
+            position: static;
+        }
+
+        .row {
+            flex-direction: column-reverse;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .calendar-container {
+            padding: 1rem;
+            border-radius: 10px;
+        }
+
+        .calendar-header {
+            padding: 1rem;
+            margin: -1rem -1rem 1rem -1rem;
+        }
+
+        .btn-calendar {
+            padding: 0.4rem 0.8rem;
+            font-size: 0.8rem;
+        }
+
+        .fc-event {
+            font-size: 0.75rem !important;
+        }
+    }
+
+    /* Animations */
+    .fade-in {
+        animation: fadeIn 0.5s ease-in;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .loading {
+        text-align: center;
+        padding: 2rem;
+        color: #6c757d;
+    }
+
+    .spinner {
+        display: inline-block;
+        width: 2rem;
+        height: 2rem;
+        border: 0.25rem solid #f3f3f3;
+        border-radius: 50%;
+        border-top-color: #667eea;
+        animation: spin 1s ease-in-out infinite;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <!-- Calendrier principal -->
+        <div class="col-lg-9">
+            <div class="calendar-container fade-in">
+                <div class="calendar-header">
+                    <h1 class="calendar-title">
+                        <i class="fas fa-calendar-alt"></i>
+                        Mon Calendrier
+                    </h1>
+                    <div class="calendar-actions">
+                        <a href="?view=month" class="btn-calendar {% if view_type == 'month' %}active{% endif %}">
+                            <i class="fas fa-calendar"></i>
+                            Mois
+                        </a>
+                        <a href="?view=week" class="btn-calendar {% if view_type == 'week' %}active{% endif %}">
+                            <i class="fas fa-calendar-week"></i>
+                            Semaine
+                        </a>
+                        <a href="?view=day" class="btn-calendar {% if view_type == 'day' %}active{% endif %}">
+                            <i class="fas fa-calendar-day"></i>
+                            Jour
+                        </a>
+                        <button type="button" class="btn-calendar" onclick="showCreateEventModal()">
+                            <i class="fas fa-plus"></i>
+                            Nouvel événement
+                        </button>
+                        <a href="{% url 'scheduler:export_ical' %}" class="btn-calendar" target="_blank">
+                            <i class="fas fa-download"></i>
+                            Export iCal
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Zone de chargement -->
+                <div id="calendar-loading" class="loading">
+                    <div class="spinner"></div>
+                    <p>Chargement du calendrier...</p>
+                </div>
+
+                <!-- Calendrier FullCalendar -->
+                <div id="calendar" style="display: none;"></div>
+            </div>
+        </div>
+
+        <!-- Sidebar événements à venir -->
+        <div class="col-lg-3">
+            <div class="upcoming-events fade-in">
+                <h3 class="upcoming-title">
+                    <i class="fas fa-clock text-primary"></i>
+                    À venir
+                </h3>
+                
+                <div id="upcoming-events-list">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Chargement...</p>
+                    </div>
+                </div>
+
+                <!-- Légende -->
+                <div class="legend">
+                    <div class="legend-title">
+                        <i class="fas fa-info-circle"></i>
+                        Légende
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color" style="background: #28a745;"></span>
+                        Cours en direct
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color" style="background: #dc3545;"></span>
+                        Échéances
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color" style="background: #fd7e14;"></span>
+                        Examens
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color" style="background: #6f42c1;"></span>
+                        Devoirs
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color" style="background: #3498db;"></span>
+                        Événements personnels
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal pour créer un événement -->
+<div class="modal fade" id="createEventModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                <h5 class="modal-title">
+                    <i class="fas fa-plus me-2"></i>
+                    Nouvel Événement
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="createEventForm">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <div class="col-md-8 mb-3">
+                            <label for="eventTitle" class="form-label">Titre *</label>
+                            <input type="text" class="form-control" id="eventTitle" name="title" required>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label for="eventType" class="form-label">Type</label>
+                            <select class="form-select" id="eventType" name="event_type">
+                                <option value="reminder">Rappel</option>
+                                <option value="meeting">Réunion</option>
+                                <option value="deadline">Échéance</option>
+                                <option value="course">Cours</option>
+                                <option value="quiz">Quiz</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="startDate" class="form-label">Date de début *</label>
+                            <input type="datetime-local" class="form-control" id="startDate" name="start_date" required>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="endDate" class="form-label">Date de fin *</label>
+                            <input type="datetime-local" class="form-control" id="endDate" name="end_date" required>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="eventColor" class="form-label">Couleur</label>
+                            <input type="color" class="form-control form-control-color" id="eventColor" name="color" value="#3498db">
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="priority" class="form-label">Priorité</label>
+                            <select class="form-select" id="priority" name="priority">
+                                <option value="low">Faible</option>
+                                <option value="medium" selected>Moyenne</option>
+                                <option value="high">Élevée</option>
+                                <option value="urgent">Urgente</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="eventDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="eventDescription" name="description" rows="3"></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="eventLocation" class="form-label">Lieu</label>
+                            <input type="text" class="form-control" id="eventLocation" name="location" placeholder="Salle, adresse...">
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="onlineLink" class="form-label">Lien en ligne</label>
+                            <input type="url" class="form-control" id="onlineLink" name="online_link" placeholder="https://...">
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="allDay" name="all_day">
+                                <label class="form-check-label" for="allDay">
+                                    Toute la journée
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="emailReminder" name="email_reminder">
+                                <label class="form-check-label" for="emailReminder">
+                                    Rappel par email
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>
+                        Créer l'événement
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal détails événement -->
+<div class="modal fade" id="eventDetailsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="eventDetailsTitle">Détails de l'événement</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="eventDetailsContent">
+                <!-- Contenu chargé dynamiquement -->
+            </div>
+            <div class="modal-footer" id="eventDetailsActions">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- FullCalendar JS -->
+<script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.8/main.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid@6.1.8/main.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@fullcalendar/timegrid@6.1.8/main.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@fullcalendar/list@6.1.8/main.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@fullcalendar/interaction@6.1.8/main.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@fullcalendar/fr@6.1.8/main.min.js"></script>
+
+<script>
+let calendar;
+
+document.addEventListener('DOMContentLoaded', function() {
+    initializeCalendar();
+    loadUpcomingEvents();
+    
+    // Actualiser les événements à venir toutes les 5 minutes
+    setInterval(loadUpcomingEvents, 300000);
+});
+
+function initializeCalendar() {
+    const calendarEl = document.getElementById('calendar');
+    const initialView = '{{ view_type }}View';
+    
+    calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: getFullCalendarView('{{ view_type }}'),
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
+        },
+        locale: 'fr',
+        firstDay: 1, // Lundi comme premier jour
+        height: 'auto',
+        nowIndicator: true,
+        selectable: true,
+        selectMirror: true,
+        dayMaxEvents: true,
+        
+        // Sources d'événements
+        events: {
+            url: '{% url "scheduler:calendar_api" %}',
+            method: 'GET',
+            failure: function() {
+                showNotification('Erreur lors du chargement des événements', 'error');
+            }
+        },
+        
+        // Interactions
+        select: function(selectionInfo) {
+            showCreateEventModal(selectionInfo.start, selectionInfo.end);
+            calendar.unselect();
+        },
+        
+        eventClick: function(clickInfo) {
+            showEventDetails(clickInfo.event);
+        },
+        
+        eventDidMount: function(info) {
+            // Ajouter des tooltips
+            info.el.setAttribute('title', info.event.title + '\n' + 
+                                formatDate(info.event.start) + ' - ' + 
+                                formatDate(info.event.end));
+        },
+        
+        loading: function(bool) {
+            const loadingEl = document.getElementById('calendar-loading');
+            const calendarEl = document.getElementById('calendar');
+            
+            if (bool) {
+                loadingEl.style.display = 'block';
+                calendarEl.style.display = 'none';
+            } else {
+                loadingEl.style.display = 'none';
+                calendarEl.style.display = 'block';
+            }
+        }
+    });
+    
+    calendar.render();
+}
+
+function getFullCalendarView(viewType) {
+    const viewMap = {
+        'month': 'dayGridMonth',
+        'week': 'timeGridWeek',
+        'day': 'timeGridDay'
+    };
+    return viewMap[viewType] || 'dayGridMonth';
+}
+
+function showCreateEventModal(startDate = null, endDate = null) {
+    const modal = new bootstrap.Modal(document.getElementById('createEventModal'));
+    
+    // Préremplir les dates si fournies
+    if (startDate) {
+        document.getElementById('startDate').value = formatDateTimeLocal(startDate);
+    }
+    if (endDate) {
+        document.getElementById('endDate').value = formatDateTimeLocal(endDate);
+    }
+    
+    modal.show();
+}
+
+function formatDateTimeLocal(date) {
+    const d = new Date(date);
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    return d.toISOString().slice(0, 16);
+}
+
+function formatDate(date) {
+    return new Date(date).toLocaleDateString('fr-FR', {
+        weekday: 'short',
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+// Gestion du formulaire de création d'événement
+document.getElementById('createEventForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const data = Object.fromEntries(formData.entries());
+    
+    // Validation
+    if (new Date(data.end_date) <= new Date(data.start_date)) {
+        showNotification('La date de fin doit être postérieure à la date de début', 'error');
+        return;
+    }
+    
+    // Envoyer la requête
+    fetch('{% url "scheduler:create_event" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('Événement créé avec succès', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('createEventModal')).hide();
+            calendar.refetchEvents();
+            loadUpcomingEvents();
+            document.getElementById('createEventForm').reset();
+        } else {
+            showNotification(data.error || 'Erreur lors de la création', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Erreur de réseau', 'error');
+    });
+});
+
+function showEventDetails(event) {
+    const modal = new bootstrap.Modal(document.getElementById('eventDetailsModal'));
+    const props = event.extendedProps;
+    
+    // Titre
+    document.getElementById('eventDetailsTitle').textContent = event.title;
+    
+    // Contenu
+    let content = `
+        <div class="row mb-3">
+            <div class="col-sm-4"><strong>Date de début:</strong></div>
+            <div class="col-sm-8">${formatDate(event.start)}</div>
+        </div>
+        <div class="row mb-3">
+            <div class="col-sm-4"><strong>Date de fin:</strong></div>
+            <div class="col-sm-8">${formatDate(event.end)}</div>
+        </div>
+    `;
+    
+    if (props.type === 'event') {
+        content += `
+            <div class="row mb-3">
+                <div class="col-sm-4"><strong>Type:</strong></div>
+                <div class="col-sm-8">
+                    <span class="badge bg-primary">${props.eventType}</span>
+                </div>
+            </div>
+        `;
+        
+        if (props.description) {
+            content += `
+                <div class="row mb-3">
+                    <div class="col-sm-4"><strong>Description:</strong></div>
+                    <div class="col-sm-8">${props.description}</div>
+                </div>
+            `;
+        }
+        
+        if (props.location) {
+            content += `
+                <div class="row mb-3">
+                    <div class="col-sm-4"><strong>Lieu:</strong></div>
+                    <div class="col-sm-8">${props.location}</div>
+                </div>
+            `;
+        }
+        
+        if (props.onlineLink) {
+            content += `
+                <div class="row mb-3">
+                    <div class="col-sm-4"><strong>Lien:</strong></div>
+                    <div class="col-sm-8">
+                        <a href="${props.onlineLink}" target="_blank" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-external-link-alt"></i> Rejoindre
+                        </a>
+                    </div>
+                </div>
+            `;
+        }
+    } else if (props.type === 'course_schedule') {
+        content += `
+            <div class="row mb-3">
+                <div class="col-sm-4"><strong>Type:</strong></div>
+                <div class="col-sm-8">
+                    <span class="badge bg-success">${props.scheduleType}</span>
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-sm-4"><strong>Cours:</strong></div>
+                <div class="col-sm-8">${props.courseTitle}</div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-sm-4"><strong>Instructeur:</strong></div>
+                <div class="col-sm-8">${props.instructorName}</div>
+            </div>
+        `;
+        
+        if (props.accessLink && (props.isEnrolled || props.isInstructor)) {
+            content += `
+                <div class="row mb-3">
+                    <div class="col-sm-4"><strong>Accès:</strong></div>
+                    <div class="col-sm-8">
+                        <a href="${props.accessLink}" target="_blank" class="btn btn-sm btn-success">
+                            <i class="fas fa-video"></i> Rejoindre le cours
+                        </a>
+                    </div>
+                </div>
+            `;
+        }
+    }
+    
+    document.getElementById('eventDetailsContent').innerHTML = content;
+    
+    // Actions
+    let actions = '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>';
+    
+    if (props.canEdit) {
+        actions += `
+            <button type="button" class="btn btn-warning" onclick="editEvent('${event.id}')">
+                <i class="fas fa-edit"></i> Modifier
+            </button>
+            <button type="button" class="btn btn-danger" onclick="deleteEvent('${event.id}')">
+                <i class="fas fa-trash"></i> Supprimer
+            </button>
+        `;
+    }
+    
+    document.getElementById('eventDetailsActions').innerHTML = actions;
+    
+    modal.show();
+}
+
+function loadUpcomingEvents() {
+    fetch('{% url "scheduler:upcoming_events" %}?limit=10&days=7')
+    .then(response => response.json())
+    .then(data => {
+        const container = document.getElementById('upcoming-events-list');
+        
+        if (data.events && data.events.length > 0) {
+            let html = '';
+            
+            data.events.forEach(event => {
+                const priorityClass = event.priority ? `priority-${event.priority}` : '';
+                const typeClass = event.type === 'course_schedule' ? event.schedule_type : event.event_type;
+                
+                html += `
+                    <div class="event-item ${priorityClass}" onclick="goToDate('${event.start_date}')">
+                        <div class="event-time">${event.time_until_start || 'Maintenant'}</div>
+                        <div class="event-title">${event.title}</div>
+                        <span class="event-type ${typeClass}">${typeClass}</span>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        } else {
+            container.innerHTML = `
+                <div class="text-center text-muted py-3">
+                    <i class="fas fa-calendar-check fa-2x mb-2"></i>
+                    <p>Aucun événement à venir</p>
+                </div>
+            `;
+        }
+    })
+    .catch(error => {
+        console.error('Error loading upcoming events:', error);
+        document.getElementById('upcoming-events-list').innerHTML = `
+            <div class="text-center text-danger py-3">
+                <i class="fas fa-exclamation-triangle fa-2x mb-2"></i>
+                <p>Erreur de chargement</p>
+            </div>
+        `;
+    });
+}
+
+function goToDate(dateString) {
+    const date = new Date(dateString);
+    calendar.gotoDate(date);
+}
+
+function deleteEvent(eventId) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cet événement ?')) {
+        return;
+    }
+    
+    const realEventId = eventId.replace('event_', '');
+    
+    fetch(`{% url "scheduler:update_event" "dummy-id" %}`.replace('dummy-id', realEventId), {
+        method: 'DELETE',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification('Événement supprimé', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('eventDetailsModal')).hide();
+            calendar.refetchEvents();
+            loadUpcomingEvents();
+        } else {
+            showNotification(data.error || 'Erreur lors de la suppression', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Erreur de réseau', 'error');
+    });
+}
+
+function showNotification(message, type = 'info') {
+    // Simple notification toast
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    toast.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // Auto remove after 5 seconds
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.remove();
+        }
+    }, 5000);
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Gestion de la checkbox "Toute la journée"
+document.getElementById('allDay').addEventListener('change', function() {
+    const startDate = document.getElementById('startDate');
+    const endDate = document.getElementById('endDate');
+    
+    if (this.checked) {
+        // Convertir en date (sans heure)
+        const startValue = startDate.value.split('T')[0];
+        const endValue = endDate.value.split('T')[0];
+        
+        startDate.type = 'date';
+        endDate.type = 'date';
+        startDate.value = startValue;
+        endDate.value = endValue;
+    } else {
+        // Remettre datetime-local
+        startDate.type = 'datetime-local';
+        endDate.type = 'datetime-local';
+    }
+});
+
+// Auto-ajustement de la date de fin
+document.getElementById('startDate').addEventListener('change', function() {
+    const endDate = document.getElementById('endDate');
+    if (!endDate.value || new Date(endDate.value) <= new Date(this.value)) {
+        const start = new Date(this.value);
+        start.setHours(start.getHours() + 1);
+        endDate.value = formatDateTimeLocal(start);
+    }
+});
+</script>
+{% endblock %}

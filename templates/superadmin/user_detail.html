@@ -1,0 +1,309 @@
+{% extends 'superadmin/base.html' %}
+
+{% block page_title %}Détails Utilisateur - {{ user_obj.username }}{% endblock %}
+
+{% block page_actions %}
+<a href="{% url 'superadmin:user_management' %}" class="btn btn-outline-secondary">
+    <i class="fas fa-arrow-left me-2"></i>Retour à la liste
+</a>
+{% endblock %}
+
+{% block content %}
+<!-- Profil utilisateur -->
+<div class="row">
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-body text-center">
+                <!-- Photo de profil -->
+                <div class="mb-3">
+                    {% if user_obj.profile_picture %}
+                        <img src="{{ user_obj.profile_picture.url }}" 
+                             alt="{{ user_obj.username }}" 
+                             class="rounded-circle mb-3" 
+                             width="120" height="120">
+                    {% else %}
+                        <div class="bg-primary rounded-circle d-inline-flex align-items-center justify-content-center mb-3" 
+                             style="width: 120px; height: 120px;">
+                            <span class="text-white fw-bold" style="font-size: 2.5rem;">
+                                {{ user_obj.first_name|first|default:user_obj.username|first|upper }}
+                            </span>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <h5 class="mb-1">
+                    {% if user_obj.first_name %}
+                        {{ user_obj.first_name }} {{ user_obj.last_name }}
+                    {% else %}
+                        {{ user_obj.username }}
+                    {% endif %}
+                </h5>
+                
+                <p class="text-muted mb-2">@{{ user_obj.username }}</p>
+                
+                <div class="mb-3">
+                    <span class="badge bg-{% if user_obj.role == 'instructor' %}success{% elif user_obj.role == 'student' %}primary{% else %}warning{% endif %} me-1">
+                        {% if user_obj.role == 'instructor' %}Formateur
+                        {% elif user_obj.role == 'student' %}Étudiant
+                        {% elif user_obj.is_staff %}Administrateur
+                        {% else %}Utilisateur{% endif %}
+                    </span>
+                    
+                    <span class="badge bg-{% if user_obj.is_active %}success{% else %}danger{% endif %}">
+                        {% if user_obj.is_active %}Actif{% else %}Inactif{% endif %}
+                    </span>
+                </div>
+
+                <!-- Actions rapides -->
+                <div class="d-grid gap-2">
+                    <form method="post" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="toggle_active">
+                        <button type="submit" class="btn btn-{% if user_obj.is_active %}warning{% else %}success{% endif %} w-100"
+                                onclick="return confirm('Êtes-vous sûr de vouloir {% if user_obj.is_active %}désactiver{% else %}activer{% endif %} cet utilisateur ?')">
+                            <i class="fas fa-{% if user_obj.is_active %}pause{% else %}play{% endif %} me-2"></i>
+                            {% if user_obj.is_active %}Désactiver{% else %}Activer{% endif %} l'utilisateur
+                        </button>
+                    </form>
+                    
+                    {% if user_obj.role != 'instructor' %}
+                        <form method="post" class="d-inline">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="make_instructor">
+                            <button type="submit" class="btn btn-outline-success w-100"
+                                    onclick="return confirm('Êtes-vous sûr de vouloir promouvoir cet utilisateur au rang de formateur ?')">
+                                <i class="fas fa-graduation-cap me-2"></i>
+                                Promouvoir Formateur
+                            </button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Informations de base -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Informations
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row mb-2">
+                    <div class="col-sm-4"><strong>Email:</strong></div>
+                    <div class="col-sm-8">{{ user_obj.email }}</div>
+                </div>
+                
+                <div class="row mb-2">
+                    <div class="col-sm-4"><strong>Inscription:</strong></div>
+                    <div class="col-sm-8">{{ user_obj.date_joined|date:"d/m/Y H:i" }}</div>
+                </div>
+                
+                <div class="row mb-2">
+                    <div class="col-sm-4"><strong>Dernière connexion:</strong></div>
+                    <div class="col-sm-8">
+                        {% if user_obj.last_login %}
+                            {{ user_obj.last_login|date:"d/m/Y H:i" }}
+                            <small class="text-muted d-block">{{ user_obj.last_login|timesince }} ago</small>
+                        {% else %}
+                            <span class="text-muted">Jamais connecté</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                {% if user_obj.phone %}
+                    <div class="row mb-2">
+                        <div class="col-sm-4"><strong>Téléphone:</strong></div>
+                        <div class="col-sm-8">{{ user_obj.phone }}</div>
+                    </div>
+                {% endif %}
+                
+                {% if user_obj.bio %}
+                    <div class="row">
+                        <div class="col-sm-4"><strong>Bio:</strong></div>
+                        <div class="col-sm-8">{{ user_obj.bio|truncatewords:20 }}</div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <!-- Statistiques utilisateur -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card bg-primary text-white">
+                    <div class="card-body text-center">
+                        <h4>{{ user_stats.courses_enrolled }}</h4>
+                        <small>Cours suivis</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-3">
+                <div class="card bg-success text-white">
+                    <div class="card-body text-center">
+                        <h4>{{ user_stats.courses_created }}</h4>
+                        <small>Cours créés</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-3">
+                <div class="card bg-info text-white">
+                    <div class="card-body text-center">
+                        <h4>{{ user_stats.total_spent|floatformat:2 }}€</h4>
+                        <small>Total dépensé</small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-3">
+                <div class="card bg-warning text-white">
+                    <div class="card-body text-center">
+                        <h4>{{ user_stats.quiz_attempts }}</h4>
+                        <small>Quiz tentés</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Transactions récentes -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-credit-card me-2"></i>
+                    Transactions Récentes
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if recent_transactions %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Montant</th>
+                                    <th>Statut</th>
+                                    <th>Cours</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for transaction in recent_transactions %}
+                                    <tr>
+                                        <td>{{ transaction.created_at|date:"d/m/Y" }}</td>
+                                        <td>{{ transaction.amount }}€</td>
+                                        <td>
+                                            <span class="badge bg-{% if transaction.status == 'completed' %}success{% elif transaction.status == 'pending' %}warning{% else %}danger{% endif %}">
+                                                {{ transaction.get_status_display }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            {% if transaction.course %}
+                                                <a href="#" class="text-decoration-none">
+                                                    {{ transaction.course.title|truncatechars:30 }}
+                                                </a>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center mb-0">Aucune transaction</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Activité récente -->
+        <div class="card">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-history me-2"></i>
+                    Journal d'Activité
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    <!-- Inscription -->
+                    <div class="timeline-item">
+                        <div class="timeline-marker bg-primary"></div>
+                        <div class="timeline-content">
+                            <h6 class="mb-1">Inscription sur la plateforme</h6>
+                            <p class="text-muted small mb-0">{{ user_obj.date_joined|date:"d/m/Y H:i" }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Dernière connexion -->
+                    {% if user_obj.last_login %}
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-success"></div>
+                            <div class="timeline-content">
+                                <h6 class="mb-1">Dernière connexion</h6>
+                                <p class="text-muted small mb-0">{{ user_obj.last_login|date:"d/m/Y H:i" }}</p>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <!-- Changements de rôle -->
+                    {% if user_obj.role == 'instructor' %}
+                        <div class="timeline-item">
+                            <div class="timeline-marker bg-warning"></div>
+                            <div class="timeline-content">
+                                <h6 class="mb-1">Promu formateur</h6>
+                                <p class="text-muted small mb-0">Date inconnue</p>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.timeline {
+    position: relative;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 15px;
+    height: 100%;
+    width: 2px;
+    background: #e9ecef;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 2rem;
+    padding-left: 3rem;
+}
+
+.timeline-marker {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 3px solid #fff;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.timeline-content {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 8px;
+    border-left: 3px solid #667eea;
+}
+</style>
+{% endblock %}

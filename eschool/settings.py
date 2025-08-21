@@ -60,6 +60,8 @@ INSTALLED_APPS = [
     'analytics.apps.AnalyticsConfig',
     'chatbot.apps.ChatbotConfig',
     'assistant.apps.AssistantConfig',
+    'superadmin.apps.SuperadminConfig',
+    'scheduler.apps.SchedulerConfig',
 ]
 
 MIDDLEWARE = [

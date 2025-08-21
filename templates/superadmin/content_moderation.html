@@ -1,0 +1,324 @@
+{% extends 'superadmin/base.html' %}
+
+{% block page_title %}Modération de Contenu{% endblock %}
+
+{% block page_actions %}
+<div class="btn-group">
+    <button type="button" class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown">
+        <i class="fas fa-filter me-2"></i>Type de contenu
+    </button>
+    <ul class="dropdown-menu">
+        <li><a class="dropdown-item {% if content_type == 'courses' %}active{% endif %}" href="?type=courses">Cours</a></li>
+        <li><a class="dropdown-item" href="?type=quiz">Quiz</a></li>
+        <li><a class="dropdown-item" href="?type=comments">Commentaires</a></li>
+    </ul>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Statistiques de modération -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body text-center">
+                <h4>{{ page_obj.paginator.count }}</h4>
+                <small>En attente de modération</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <h4>0</h4>
+                <small>Approuvés aujourd'hui</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-danger text-white">
+            <div class="card-body text-center">
+                <h4>0</h4>
+                <small>Rejetés aujourd'hui</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body text-center">
+                <h4>{{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</h4>
+                <small>Page courante</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtres et navigation -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <div class="btn-group btn-group-sm" role="group">
+                    <input type="radio" class="btn-check" name="content_type" id="courses" 
+                           {% if content_type == 'courses' %}checked{% endif %}>
+                    <label class="btn btn-outline-primary" for="courses">
+                        <i class="fas fa-book me-1"></i>Cours
+                    </label>
+                    
+                    <input type="radio" class="btn-check" name="content_type" id="quiz">
+                    <label class="btn btn-outline-primary" for="quiz">
+                        <i class="fas fa-question-circle me-1"></i>Quiz
+                    </label>
+                    
+                    <input type="radio" class="btn-check" name="content_type" id="comments">
+                    <label class="btn btn-outline-primary" for="comments">
+                        <i class="fas fa-comments me-1"></i>Commentaires
+                    </label>
+                </div>
+            </div>
+            <div class="col-md-6 text-end">
+                <div class="text-muted small">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Cliquez sur un élément pour le modérer
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Liste du contenu à modérer -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-{% if content_type == 'courses' %}book{% elif content_type == 'quiz' %}question-circle{% else %}comments{% endif %} me-2"></i>
+            {% if content_type == 'courses' %}Cours{% elif content_type == 'quiz' %}Quiz{% else %}Commentaires{% endif %} en attente de modération
+        </h5>
+    </div>
+    <div class="card-body p-0">
+        {% if page_obj %}
+            {% for item in page_obj %}
+                <div class="moderation-item border-bottom p-4 hover-bg-light" onclick="moderateItem('{{ content_type|slice:':-1' }}', {{ item.id }})">
+                    <div class="row align-items-start">
+                        <div class="col-md-8">
+                            <div class="d-flex align-items-center mb-2">
+                                <div class="avatar-circle me-3">
+                                    {% if item.instructor.profile_picture %}
+                                        <img src="{{ item.instructor.profile_picture.url }}" 
+                                             alt="{{ item.instructor.username }}" 
+                                             class="rounded-circle" width="40" height="40">
+                                    {% else %}
+                                        <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center" 
+                                             style="width: 40px; height: 40px;">
+                                            <span class="text-white fw-bold">
+                                                {{ item.instructor.first_name|first|default:item.instructor.username|first|upper }}
+                                            </span>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <h6 class="mb-0">{{ item.title|truncatechars:60 }}</h6>
+                                    <small class="text-muted">
+                                        Par {{ item.instructor.first_name|default:item.instructor.username }} 
+                                        • {{ item.created_at|timesince }} ago
+                                    </small>
+                                </div>
+                            </div>
+                            
+                            <p class="text-muted mb-2">{{ item.description|truncatewords:25 }}</p>
+                            
+                            <div class="d-flex flex-wrap gap-1">
+                                <span class="badge bg-primary">{{ item.category.name|default:"Sans catégorie" }}</span>
+                                <span class="badge bg-info">{{ item.level|default:"Débutant" }}</span>
+                                {% if item.price %}
+                                    <span class="badge bg-success">{{ item.price }}€</span>
+                                {% else %}
+                                    <span class="badge bg-warning">Gratuit</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4 text-end">
+                            <div class="btn-group btn-group-sm mb-2">
+                                <button type="button" class="btn btn-success" 
+                                        onclick="quickAction(event, 'approve', '{{ content_type|slice:':-1' }}', {{ item.id }})">
+                                    <i class="fas fa-check me-1"></i>Approuver
+                                </button>
+                                <button type="button" class="btn btn-danger" 
+                                        onclick="quickAction(event, 'reject', '{{ content_type|slice:':-1' }}', {{ item.id }})">
+                                    <i class="fas fa-times me-1"></i>Rejeter
+                                </button>
+                            </div>
+                            
+                            <div class="small text-muted">
+                                <div><i class="fas fa-calendar me-1"></i>{{ item.created_at|date:"d/m/Y" }}</div>
+                                {% if item.duration %}
+                                    <div><i class="fas fa-clock me-1"></i>{{ item.duration }} min</div>
+                                {% endif %}
+                                {% if item.lessons_count %}
+                                    <div><i class="fas fa-play me-1"></i>{{ item.lessons_count }} leçons</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+
+            <!-- Pagination -->
+            {% if page_obj.has_other_pages %}
+                <div class="card-footer">
+                    <nav aria-label="Pagination des contenus">
+                        <ul class="pagination justify-content-center mb-0">
+                            {% if page_obj.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page=1&type={{ content_type }}">
+                                        <i class="fas fa-angle-double-left"></i>
+                                    </a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}&type={{ content_type }}">
+                                        <i class="fas fa-angle-left"></i>
+                                    </a>
+                                </li>
+                            {% endif %}
+
+                            {% for num in page_obj.paginator.page_range %}
+                                {% if page_obj.number == num %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ num }}</span>
+                                    </li>
+                                {% elif num > page_obj.number|add:-3 and num < page_obj.number|add:3 %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ num }}&type={{ content_type }}">{{ num }}</a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if page_obj.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.next_page_number }}&type={{ content_type }}">
+                                        <i class="fas fa-angle-right"></i>
+                                    </a>
+                                </li>
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}&type={{ content_type }}">
+                                        <i class="fas fa-angle-double-right"></i>
+                                    </a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+            {% endif %}
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                <h5>Aucun contenu en attente</h5>
+                <p class="text-muted">
+                    {% if content_type == 'courses' %}
+                        Tous les cours ont été modérés !
+                    {% elif content_type == 'quiz' %}
+                        Tous les quiz ont été modérés !
+                    {% else %}
+                        Tous les commentaires ont été modérés !
+                    {% endif %}
+                </p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.moderation-item {
+    transition: background-color 0.2s ease;
+    cursor: pointer;
+}
+
+.moderation-item:hover {
+    background-color: #f8f9fa !important;
+}
+
+.hover-bg-light:hover {
+    background-color: rgba(0,0,0,.05) !important;
+}
+
+.btn-check:checked + .btn {
+    background-color: #667eea;
+    border-color: #667eea;
+    color: white;
+}
+
+.avatar-circle img {
+    object-fit: cover;
+}
+
+.badge {
+    font-size: 0.75rem;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function moderateItem(contentType, contentId) {
+    window.location.href = `{% url 'superadmin:moderate_content' 'CONTENT_TYPE' 0 %}`.replace('CONTENT_TYPE', contentType).replace('0', contentId);
+}
+
+function quickAction(event, action, contentType, contentId) {
+    event.stopPropagation(); // Empêcher le clic sur l'élément parent
+    
+    const actionText = action === 'approve' ? 'approuver' : 'rejeter';
+    const confirmMessage = `Êtes-vous sûr de vouloir ${actionText} ce contenu ?`;
+    
+    if (confirm(confirmMessage)) {
+        // Créer un formulaire temporaire pour soumettre l'action
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `{% url 'superadmin:moderate_content' 'CONTENT_TYPE' 0 %}`.replace('CONTENT_TYPE', contentType).replace('0', contentId);
+        
+        // CSRF token
+        const csrfToken = document.createElement('input');
+        csrfToken.type = 'hidden';
+        csrfToken.name = 'csrfmiddlewaretoken';
+        csrfToken.value = '{{ csrf_token }}';
+        form.appendChild(csrfToken);
+        
+        // Action
+        const actionInput = document.createElement('input');
+        actionInput.type = 'hidden';
+        actionInput.name = 'action';
+        actionInput.value = action;
+        form.appendChild(actionInput);
+        
+        // Raison rapide
+        const reasonInput = document.createElement('input');
+        reasonInput.type = 'hidden';
+        reasonInput.name = 'reason';
+        reasonInput.value = `Action rapide: ${actionText} depuis la liste`;
+        form.appendChild(reasonInput);
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+// Gestion des filtres par type de contenu
+document.querySelectorAll('input[name="content_type"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        if (this.checked) {
+            const contentType = this.id;
+            window.location.href = `?type=${contentType}`;
+        }
+    });
+});
+
+// Sélection automatique du bon filtre
+document.addEventListener('DOMContentLoaded', function() {
+    const currentType = '{{ content_type }}';
+    const radio = document.getElementById(currentType);
+    if (radio) {
+        radio.checked = true;
+    }
+});
+</script>
+{% endblock %}

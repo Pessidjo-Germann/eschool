@@ -1,0 +1,441 @@
+{% extends 'superadmin/base.html' %}
+
+{% block page_title %}Configuration Système{% endblock %}
+
+{% block page_actions %}
+<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addConfigModal">
+    <i class="fas fa-plus me-2"></i>Nouvelle Configuration
+</button>
+{% endblock %}
+
+{% block content %}
+<!-- Avertissement de sécurité -->
+<div class="alert alert-warning">
+    <i class="fas fa-exclamation-triangle me-2"></i>
+    <strong>Attention:</strong> Les modifications de configuration peuvent affecter le fonctionnement de la plateforme. 
+    Veillez à bien comprendre l'impact de chaque paramètre avant de le modifier.
+</div>
+
+<!-- Configurations existantes -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-cog me-2"></i>
+            Paramètres de Configuration
+        </h5>
+    </div>
+    <div class="card-body p-0">
+        {% if configs %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th width="25%">Clé</th>
+                            <th width="30%">Valeur</th>
+                            <th width="30%">Description</th>
+                            <th width="15%">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for config in configs %}
+                            <tr>
+                                <td>
+                                    <code class="config-key">{{ config.key }}</code>
+                                    <div class="small text-muted">
+                                        Mis à jour par {{ config.updated_by.username }}
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="config-value" data-key="{{ config.key }}">
+                                        {% if config.value|length > 50 %}
+                                            <span class="value-preview">{{ config.value|truncatechars:50 }}</span>
+                                            <button type="button" class="btn btn-link btn-sm p-0 ms-1" 
+                                                    onclick="toggleValue(this)">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <div class="value-full d-none">{{ config.value }}</div>
+                                        {% else %}
+                                            <span class="value-preview">{{ config.value }}</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="config-description">
+                                        {% if config.description %}
+                                            {{ config.description|truncatewords:15 }}
+                                        {% else %}
+                                            <span class="text-muted">Aucune description</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <button type="button" class="btn btn-outline-primary" 
+                                                onclick="editConfig('{{ config.key }}', '{{ config.value|escapejs }}', '{{ config.description|escapejs }}')"
+                                                title="Modifier">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        
+                                        <button type="button" class="btn btn-outline-danger" 
+                                                onclick="deleteConfig('{{ config.key }}')"
+                                                title="Supprimer">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-cog fa-3x text-muted mb-3"></i>
+                <h5>Aucune configuration</h5>
+                <p class="text-muted">Commencez par ajouter votre première configuration système.</p>
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addConfigModal">
+                    <i class="fas fa-plus me-2"></i>Ajouter une Configuration
+                </button>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Configurations prédéfinies suggérées -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h6 class="mb-0">
+            <i class="fas fa-lightbulb me-2"></i>
+            Configurations Suggérées
+        </h6>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <h6 class="text-primary">Paramètres Généraux</h6>
+                <div class="list-group list-group-flush">
+                    <div class="list-group-item d-flex justify-content-between align-items-center border-0 px-0">
+                        <div>
+                            <strong>site_name</strong>
+                            <div class="small text-muted">Nom de la plateforme</div>
+                        </div>
+                        <button class="btn btn-outline-secondary btn-sm" 
+                                onclick="quickAdd('site_name', 'eSchool Platform', 'Nom de la plateforme affiché aux utilisateurs')">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="list-group-item d-flex justify-content-between align-items-center border-0 px-0">
+                        <div>
+                            <strong>maintenance_mode</strong>
+                            <div class="small text-muted">Mode maintenance</div>
+                        </div>
+                        <button class="btn btn-outline-secondary btn-sm" 
+                                onclick="quickAdd('maintenance_mode', 'false', 'Active/désactive le mode maintenance')">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="list-group-item d-flex justify-content-between align-items-center border-0 px-0">
+                        <div>
+                            <strong>max_upload_size</strong>
+                            <div class="small text-muted">Taille max upload (MB)</div>
+                        </div>
+                        <button class="btn btn-outline-secondary btn-sm" 
+                                onclick="quickAdd('max_upload_size', '100', 'Taille maximum des fichiers uploadés en MB')">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <h6 class="text-success">Paramètres Paiement</h6>
+                <div class="list-group list-group-flush">
+                    <div class="list-group-item d-flex justify-content-between align-items-center border-0 px-0">
+                        <div>
+                            <strong>min_course_price</strong>
+                            <div class="small text-muted">Prix minimum cours</div>
+                        </div>
+                        <button class="btn btn-outline-secondary btn-sm" 
+                                onclick="quickAdd('min_course_price', '5.00', 'Prix minimum pour un cours payant')">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="list-group-item d-flex justify-content-between align-items-center border-0 px-0">
+                        <div>
+                            <strong>commission_rate</strong>
+                            <div class="small text-muted">Taux de commission (%)</div>
+                        </div>
+                        <button class="btn btn-outline-secondary btn-sm" 
+                                onclick="quickAdd('commission_rate', '15', 'Pourcentage de commission prélevé')">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="list-group-item d-flex justify-content-between align-items-center border-0 px-0">
+                        <div>
+                            <strong>payment_timeout</strong>
+                            <div class="small text-muted">Timeout paiement (min)</div>
+                        </div>
+                        <button class="btn btn-outline-secondary btn-sm" 
+                                onclick="quickAdd('payment_timeout', '30', 'Timeout pour les transactions en minutes')">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal d'ajout/modification -->
+<div class="modal fade" id="addConfigModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">
+                    <i class="fas fa-plus me-2"></i>Nouvelle Configuration
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" id="configForm">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="config_key" class="form-label">Clé de configuration *</label>
+                        <input type="text" class="form-control" id="config_key" name="key" required
+                               placeholder="ex: site_name, max_upload_size">
+                        <div class="form-text">Utilisez snake_case (ex: max_file_size)</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="config_value" class="form-label">Valeur *</label>
+                        <textarea class="form-control" id="config_value" name="value" rows="3" required
+                                  placeholder="Valeur de la configuration..."></textarea>
+                        <div class="form-text">Peut être du texte, un nombre ou du JSON</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="config_description" class="form-label">Description</label>
+                        <textarea class="form-control" id="config_description" name="description" rows="2"
+                                  placeholder="Description de cette configuration..."></textarea>
+                        <div class="form-text">Expliquez à quoi sert cette configuration</div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <small>
+                            <strong>Types de valeurs supportés:</strong><br>
+                            • Texte: "ma valeur"<br>
+                            • Nombre: 123 ou 45.67<br>
+                            • Booléen: true ou false<br>
+                            • JSON: {"key": "value"}
+                        </small>
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Sauvegarder
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.config-key {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    background: #f8f9fa;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    color: #e83e8c;
+}
+
+.config-value {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.875rem;
+    max-width: 300px;
+}
+
+.value-preview {
+    background: #e9ecef;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    word-break: break-word;
+}
+
+.value-full {
+    background: #f8f9fa;
+    padding: 0.5rem;
+    border-radius: 4px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    border: 1px solid #dee2e6;
+    margin-top: 0.5rem;
+}
+
+.config-description {
+    font-size: 0.875rem;
+    line-height: 1.4;
+}
+
+.table td {
+    vertical-align: middle;
+}
+
+.list-group-item:last-child {
+    border-bottom: 1px solid #dee2e6;
+}
+
+.btn-group-sm .btn {
+    padding: 0.25rem 0.5rem;
+}
+
+.alert {
+    border-radius: 8px;
+}
+
+.modal-content {
+    border-radius: 12px;
+    border: none;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+
+.modal-header {
+    border-bottom: 1px solid #e9ecef;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 12px 12px 0 0;
+}
+
+.modal-header .btn-close {
+    filter: invert(1);
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleValue(button) {
+    const configValue = button.closest('.config-value');
+    const preview = configValue.querySelector('.value-preview');
+    const full = configValue.querySelector('.value-full');
+    const icon = button.querySelector('i');
+    
+    if (full.classList.contains('d-none')) {
+        full.classList.remove('d-none');
+        preview.classList.add('d-none');
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+        button.title = 'Masquer';
+    } else {
+        full.classList.add('d-none');
+        preview.classList.remove('d-none');
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+        button.title = 'Afficher tout';
+    }
+}
+
+function editConfig(key, value, description) {
+    document.getElementById('modalTitle').innerHTML = '<i class="fas fa-edit me-2"></i>Modifier Configuration';
+    document.getElementById('config_key').value = key;
+    document.getElementById('config_value').value = value;
+    document.getElementById('config_description').value = description;
+    
+    // Désactiver la modification de la clé pour éviter les doublons
+    document.getElementById('config_key').readOnly = true;
+    document.getElementById('config_key').style.backgroundColor = '#e9ecef';
+    
+    new bootstrap.Modal(document.getElementById('addConfigModal')).show();
+}
+
+function quickAdd(key, value, description) {
+    document.getElementById('modalTitle').innerHTML = '<i class="fas fa-plus me-2"></i>Nouvelle Configuration';
+    document.getElementById('config_key').value = key;
+    document.getElementById('config_value').value = value;
+    document.getElementById('config_description').value = description;
+    
+    // Réactiver la modification de la clé
+    document.getElementById('config_key').readOnly = false;
+    document.getElementById('config_key').style.backgroundColor = '';
+    
+    new bootstrap.Modal(document.getElementById('addConfigModal')).show();
+}
+
+function deleteConfig(key) {
+    if (confirm(`Êtes-vous sûr de vouloir supprimer la configuration "${key}" ?\n\nCette action est irréversible.`)) {
+        // Créer un formulaire pour supprimer la configuration
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.innerHTML = `
+            <input type="hidden" name="csrfmiddlewaretoken" value="${getCookie('csrftoken')}">
+            <input type="hidden" name="action" value="delete">
+            <input type="hidden" name="key" value="${key}">
+        `;
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Réinitialiser le modal quand on le ferme
+document.getElementById('addConfigModal').addEventListener('hidden.bs.modal', function() {
+    document.getElementById('modalTitle').innerHTML = '<i class="fas fa-plus me-2"></i>Nouvelle Configuration';
+    document.getElementById('configForm').reset();
+    document.getElementById('config_key').readOnly = false;
+    document.getElementById('config_key').style.backgroundColor = '';
+});
+
+// Validation du formulaire
+document.getElementById('configForm').addEventListener('submit', function(e) {
+    const key = document.getElementById('config_key').value.trim();
+    const value = document.getElementById('config_value').value.trim();
+    
+    if (!key || !value) {
+        e.preventDefault();
+        alert('La clé et la valeur sont obligatoires.');
+        return;
+    }
+    
+    // Vérifier le format de la clé (snake_case)
+    if (!/^[a-z][a-z0-9_]*$/.test(key)) {
+        e.preventDefault();
+        alert('La clé doit être en snake_case (lettres minuscules, chiffres et underscores uniquement).');
+        document.getElementById('config_key').focus();
+        return;
+    }
+});
+
+// Auto-resize des textareas
+document.querySelectorAll('textarea').forEach(textarea => {
+    textarea.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = this.scrollHeight + 'px';
+    });
+});
+</script>
+{% endblock %}
