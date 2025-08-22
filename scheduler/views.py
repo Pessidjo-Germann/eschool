@@ -65,8 +65,8 @@ def calendar_api(request):
     
     # Récupérer les cours planifiés pour l'utilisateur
     enrolled_courses = Enrollment.objects.filter(
-        student=request.user,
-        is_active=True
+        user=request.user,
+        status='active'
     ).values_list('course_id', flat=True)
     
     course_schedules = CourseSchedule.objects.filter(
@@ -338,8 +338,8 @@ def export_ical(request):
     
     # Récupérer les cours planifiés
     enrolled_courses = Enrollment.objects.filter(
-        student=request.user,
-        is_active=True
+        user=request.user,
+        status='active'
     ).values_list('course_id', flat=True)
     
     course_schedules = CourseSchedule.objects.filter(
@@ -396,8 +396,8 @@ def upcoming_events(request):
     
     # Cours planifiés à venir
     enrolled_courses = Enrollment.objects.filter(
-        student=request.user,
-        is_active=True
+        user=request.user,
+        status='active'
     ).values_list('course_id', flat=True)
     
     course_schedules = CourseSchedule.objects.filter(

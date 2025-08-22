@@ -4,11 +4,8 @@
 {% block title %}Calendrier - eSchool{% endblock %}
 
 {% block extra_css %}
-<!-- FullCalendar CSS -->
-<link href="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.8/main.min.css" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid@6.1.8/main.min.css" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/@fullcalendar/timegrid@6.1.8/main.min.css" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/@fullcalendar/list@6.1.8/main.min.css" rel="stylesheet">
+<!-- FullCalendar CSS - Version globale -->
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet">
 
 <style>
     .calendar-container {
@@ -548,26 +545,32 @@
 {% endblock %}
 
 {% block extra_js %}
-<!-- FullCalendar JS -->
-<script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.8/main.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@fullcalendar/daygrid@6.1.8/main.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@fullcalendar/timegrid@6.1.8/main.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@fullcalendar/list@6.1.8/main.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@fullcalendar/interaction@6.1.8/main.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@fullcalendar/fr@6.1.8/main.min.js"></script>
+<!-- FullCalendar JS - Version plus récente -->
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core/locales/fr.global.min.js"></script>
 
 <script>
 let calendar;
 
 document.addEventListener('DOMContentLoaded', function() {
-    initializeCalendar();
-    loadUpcomingEvents();
-    
-    // Actualiser les événements à venir toutes les 5 minutes
-    setInterval(loadUpcomingEvents, 300000);
+    // Attendre un peu que FullCalendar se charge complètement
+    setTimeout(function() {
+        initializeCalendar();
+        loadUpcomingEvents();
+        
+        // Actualiser les événements à venir toutes les 5 minutes
+        setInterval(loadUpcomingEvents, 300000);
+    }, 100);
 });
 
 function initializeCalendar() {
+    // Vérifier que FullCalendar est chargé
+    if (typeof FullCalendar === 'undefined') {
+        console.error('FullCalendar n\'est pas chargé !');
+        showNotification('Erreur: Bibliothèque calendrier non disponible', 'error');
+        return;
+    }
+    
     const calendarEl = document.getElementById('calendar');
     const initialView = '{{ view_type }}View';
     
@@ -587,12 +590,40 @@ function initializeCalendar() {
         dayMaxEvents: true,
         
         // Sources d'événements
-        events: {
-            url: '{% url "scheduler:calendar_api" %}',
-            method: 'GET',
-            failure: function() {
-                showNotification('Erreur lors du chargement des événements', 'error');
-            }
+        events: function(fetchInfo, successCallback, failureCallback) {
+            const url = new URL('{% url "scheduler:calendar_api" %}', window.location.origin);
+            url.searchParams.append('start', fetchInfo.startStr);
+            url.searchParams.append('end', fetchInfo.endStr);
+            // Eviter fetchInfo.view.type (peut être undefined selon versions)
+            const currentViewType = (calendar && calendar.view && calendar.view.type)
+                ? calendar.view.type
+                : getFullCalendarView('{{ view_type }}');
+            url.searchParams.append('view', currentViewType);
+            
+            fetch(url, {
+                method: 'GET',
+                credentials: 'same-origin',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                const events = data.events || data;
+                successCallback(events);
+            })
+            .catch(error => {
+                console.error('Erreur API:', error);
+                showNotification('Erreur lors du chargement des événements: ' + error.message, 'error');
+                failureCallback(error);
+            });
         },
         
         // Interactions
@@ -876,7 +907,7 @@ function deleteEvent(eventId) {
     
     const realEventId = eventId.replace('event_', '');
     
-    fetch(`{% url "scheduler:update_event" "dummy-id" %}`.replace('dummy-id', realEventId), {
+    fetch(`{% url "scheduler:update_event" "00000000-0000-0000-0000-000000000000" %}`.replace('00000000-0000-0000-0000-000000000000', realEventId), {
         method: 'DELETE',
         headers: {
             'X-CSRFToken': getCookie('csrftoken')
@@ -933,6 +964,7 @@ function getCookie(name) {
     }
     return cookieValue;
 }
+
 
 // Gestion de la checkbox "Toute la journée"
 document.getElementById('allDay').addEventListener('change', function() {

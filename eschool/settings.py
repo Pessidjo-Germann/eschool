@@ -62,6 +62,7 @@ INSTALLED_APPS = [
     'assistant.apps.AssistantConfig',
     'superadmin.apps.SuperadminConfig',
     'scheduler.apps.SchedulerConfig',
+    'certificates.apps.CertificatesConfig',
 ]
 
 MIDDLEWARE = [
@@ -193,3 +194,20 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 # Assistant Configuration
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
 GEMINI_MODEL = os.getenv('GEMINI_MODEL', 'gemini-2.5-flash')
+
+# Certificates Configuration
+DEFAULT_FROM_EMAIL = 'noreply@eschool.com'
+SITE_URL = os.getenv('SITE_URL', 'http://localhost:8000')
+
+# Secure storage for certificates
+CERTIFICATES_STORAGE_DIR = MEDIA_ROOT / 'certificates'
+CERTIFICATES_BACKUP_DIR = MEDIA_ROOT / 'certificates_backup'
+
+# Certificate generation settings
+CERTIFICATE_DEFAULT_FORMAT = 'PNG'
+CERTIFICATE_PDF_ENABLED = True
+CERTIFICATE_QR_CODE_ENABLED = True
+
+# Security settings for certificates
+CERTIFICATE_VERIFICATION_ENABLED = True
+CERTIFICATE_SHARE_EXPIRY_DAYS = 365

@@ -1,0 +1,40 @@
+🎉 FÉLICITATIONS ! Votre certificat de réussite est prêt
+
+Bonjour {{ user.get_full_name|default:user.username }},
+
+Nous avons le plaisir de vous informer que votre certificat de réussite pour le cours "{{ certificate.course_title }}" a été généré avec succès !
+
+📜 DÉTAILS DE VOTRE CERTIFICAT
+===============================
+Numéro de certificat: {{ certificate.certificate_number }}
+Cours: {{ certificate.course_title }}
+Date de completion: {{ certificate.completion_date|date:"d F Y" }}
+{% if certificate.final_grade %}Note finale: {{ certificate.display_grade }}{% endif %}
+Statut: {% if certificate.status == 'issued' %}✅ Délivré{% else %}🔄 Généré{% endif %}
+
+🔗 LIENS UTILES
+===============
+Voir votre certificat: {{ site_url }}{% url 'certificates:certificate_detail' certificate.id %}
+Tous vos certificats: {{ site_url }}{% url 'certificates:my_certificates' %}
+
+✨ QUE POUVEZ-VOUS FAIRE MAINTENANT ?
+====================================
+• Télécharger votre certificat en format PNG ou PDF
+• Le partager sur vos réseaux sociaux professionnels  
+• L'ajouter à votre CV ou portfolio
+• Le faire vérifier par des tiers grâce à son lien de vérification unique
+
+🔒 SÉCURITÉ ET AUTHENTICITÉ
+===========================
+Votre certificat est protégé par un hash de vérification unique et peut être authentifié à tout moment via notre système de vérification en ligne.
+
+Félicitations encore pour cette réussite ! Nous espérons que cette formation vous sera utile dans votre parcours professionnel.
+
+Cordialement,
+L'équipe eSchool
+
+---
+eSchool - Plateforme d'apprentissage en ligne
+📧 support@eschool.com | 🌐 {{ site_url }}
+
+Cet email a été envoyé automatiquement. Merci de ne pas répondre directement à ce message.

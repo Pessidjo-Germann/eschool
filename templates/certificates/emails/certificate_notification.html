@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Votre certificat de réussite</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #f8f9fa;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .content {
+            padding: 30px;
+        }
+        .certificate-preview {
+            text-align: center;
+            margin: 20px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #e74c3c;
+            color: white;
+            text-decoration: none;
+            border-radius: 50px;
+            margin: 10px 5px;
+            font-weight: bold;
+        }
+        .btn:hover {
+            background: #c0392b;
+        }
+        .footer {
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-size: 14px;
+        }
+        .badge {
+            display: inline-block;
+            background: rgba(255,255,255,0.2);
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            margin: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎉 Félicitations !</h1>
+            <p>Votre certificat de réussite est prêt</p>
+            <div class="badge">{{ certificate.course_title }}</div>
+        </div>
+        
+        <div class="content">
+            <p>Bonjour {{ user.get_full_name|default:user.username }},</p>
+            
+            <p>
+                Nous avons le plaisir de vous informer que votre <strong>certificat de réussite</strong> 
+                pour le cours <strong>"{{ certificate.course_title }}"</strong> a été généré avec succès !
+            </p>
+            
+            <div class="certificate-preview">
+                <h3>📜 Certificat N° {{ certificate.certificate_number }}</h3>
+                <p><strong>Cours:</strong> {{ certificate.course_title }}</p>
+                <p><strong>Date de completion:</strong> {{ certificate.completion_date|date:"d F Y" }}</p>
+                {% if certificate.final_grade %}
+                    <p><strong>Note finale:</strong> {{ certificate.display_grade }}</p>
+                {% endif %}
+                <p><strong>Statut:</strong> 
+                    {% if certificate.status == 'issued' %}
+                        <span style="color: #27ae60;">✅ Délivré</span>
+                    {% else %}
+                        <span style="color: #3498db;">🔄 Généré</span>
+                    {% endif %}
+                </p>
+            </div>
+            
+            <p>Vous pouvez maintenant :</p>
+            <ul>
+                <li>Télécharger votre certificat en format PNG ou PDF</li>
+                <li>Le partager sur vos réseaux sociaux professionnels</li>
+                <li>L'ajouter à votre CV ou portfolio</li>
+                <li>Le faire vérifier par des tiers grâce à son lien de vérification unique</li>
+            </ul>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{{ site_url }}{% url 'certificates:certificate_detail' certificate.id %}" class="btn">
+                    🔍 Voir mon certificat
+                </a>
+                <a href="{{ site_url }}{% url 'certificates:my_certificates' %}" class="btn" style="background: #3498db;">
+                    📋 Tous mes certificats
+                </a>
+            </div>
+            
+            <div style="background: #ecf0f1; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                <h4 style="margin-top: 0;">🔒 Sécurité et Authenticité</h4>
+                <p style="margin-bottom: 0; font-size: 14px;">
+                    Votre certificat est protégé par un hash de vérification unique et peut être 
+                    authentifié à tout moment via notre système de vérification en ligne.
+                </p>
+            </div>
+            
+            <p>
+                Félicitations encore pour cette réussite ! Nous espérons que cette formation 
+                vous sera utile dans votre parcours professionnel.
+            </p>
+            
+            <p>
+                Cordialement,<br>
+                <strong>L'équipe eSchool</strong>
+            </p>
+        </div>
+        
+        <div class="footer">
+            <p>
+                <strong>eSchool</strong> - Plateforme d'apprentissage en ligne<br>
+                📧 support@eschool.com | 🌐 {{ site_url }}
+            </p>
+            <p style="font-size: 12px; opacity: 0.8;">
+                Cet email a été envoyé automatiquement. Merci de ne pas répondre directement à ce message.
+            </p>
+        </div>
+    </div>
+</body>
+</html>
